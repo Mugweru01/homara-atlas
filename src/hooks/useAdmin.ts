@@ -72,26 +72,32 @@ export function useAdmin() {
   };
 
   const signIn = async (email: string, adminCode: string) => {
-    // First verify admin code exists in admins table
-    const { data: adminData, error: adminError } = await supabase
-      .from('admins')
-      .select('user_id, email, status')
-      .eq('email', email)
-      .eq('admin_code', adminCode)
-      .eq('status', 'active')
-      .single();
+    try {
+      // Call edge function to verify admin code and create session
+      const { data, error } = await supabase.functions.invoke('admin-auth', {
+        body: { email, adminCode }
+      });
 
-    if (adminError || !adminData) {
-      return { error: { message: 'Invalid email or admin code' } };
+      if (error || !data?.success) {
+        return { error: { message: data?.error || 'Invalid email or admin code' } };
+      }
+
+      // If we have a magic link, use it to sign in
+      if (data.session?.properties?.hashed_token) {
+        const { error: verifyError } = await supabase.auth.verifyOtp({
+          token_hash: data.session.properties.hashed_token,
+          type: 'magiclink'
+        });
+        
+        if (verifyError) {
+          return { error: { message: 'Authentication failed' } };
+        }
+      }
+
+      return { error: null };
+    } catch (err) {
+      return { error: { message: 'Authentication failed' } };
     }
-
-    // Use admin code as password for auth
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password: adminCode,
-    });
-    
-    return { error };
   };
 
   const signOut = async () => {
