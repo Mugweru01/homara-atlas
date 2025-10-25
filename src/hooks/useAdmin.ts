@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
 import { logger } from '@/lib/production-logger';
+import { checkRateLimit, recordFailedLogin, clearFailedLogins } from '@/lib/admin-rate-limiter';
+import { logAdminLogin, logAdminLogout } from '@/lib/security-logger';
 
 export interface AdminInfo {
   id: string;
@@ -74,12 +76,23 @@ export function useAdmin() {
 
   const signIn = async (email: string, adminCode: string) => {
     try {
+      // Check rate limit before attempting login
+      const rateLimit = await checkRateLimit(email, 'admin_login');
+      
+      if (!rateLimit.allowed) {
+        const errorMessage = `Too many login attempts. Please try again in ${Math.ceil(rateLimit.retryAfter! / 60)} minutes.`;
+        await logAdminLogin(false, email, errorMessage);
+        return { error: { message: errorMessage } };
+      }
+
       // Call edge function to verify admin code and create session
       const { data, error } = await supabase.functions.invoke('admin-auth', {
         body: { email, adminCode }
       });
 
       if (error || !data?.success) {
+        await recordFailedLogin(email);
+        await logAdminLogin(false, email, data?.error || 'Invalid credentials');
         return { error: { message: data?.error || 'Invalid email or admin code' } };
       }
 
@@ -91,17 +104,26 @@ export function useAdmin() {
         });
         
         if (verifyError) {
+          await recordFailedLogin(email);
+          await logAdminLogin(false, email, 'Authentication failed');
           return { error: { message: 'Authentication failed' } };
         }
       }
 
+      // Clear failed login attempts on success
+      await clearFailedLogins(email);
+      await logAdminLogin(true, email);
+
       return { error: null };
     } catch (err) {
+      await recordFailedLogin(email);
+      await logAdminLogin(false, email, 'System error');
       return { error: { message: 'Authentication failed' } };
     }
   };
 
   const signOut = async () => {
+    await logAdminLogout();
     await supabase.auth.signOut();
     setAdminInfo(null);
   };
