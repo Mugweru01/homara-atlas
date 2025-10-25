@@ -71,11 +71,26 @@ export function useAdmin() {
     }
   };
 
-  const signIn = async (email: string, password: string) => {
+  const signIn = async (email: string, adminCode: string) => {
+    // First verify admin code exists in admins table
+    const { data: adminData, error: adminError } = await supabase
+      .from('admins')
+      .select('user_id, email, status')
+      .eq('email', email)
+      .eq('admin_code', adminCode)
+      .eq('status', 'active')
+      .single();
+
+    if (adminError || !adminData) {
+      return { error: { message: 'Invalid email or admin code' } };
+    }
+
+    // Use admin code as password for auth
     const { error } = await supabase.auth.signInWithPassword({
       email,
-      password,
+      password: adminCode,
     });
+    
     return { error };
   };
 

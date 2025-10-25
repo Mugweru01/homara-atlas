@@ -12,7 +12,7 @@ import { toast } from 'sonner';
 export default function AdminLogin() {
   const { isAdmin, loading, signIn } = useAdmin();
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [adminCode, setAdminCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -36,7 +36,7 @@ export default function AdminLogin() {
     setError('');
     setIsLoading(true);
 
-    const { error } = await signIn(email, password);
+    const { error } = await signIn(email, adminCode);
 
     if (error) {
       setError(error.message);
@@ -84,13 +84,13 @@ export default function AdminLogin() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="adminCode">Admin Code</Label>
               <Input
-                id="password"
+                id="adminCode"
                 type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Enter your admin code"
+                value={adminCode}
+                onChange={(e) => setAdminCode(e.target.value)}
                 required
                 disabled={isLoading}
               />
