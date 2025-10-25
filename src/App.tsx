@@ -15,6 +15,7 @@ const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
 const AdminUsers = lazy(() => import("./pages/admin/Users"));
 const AdminListings = lazy(() => import("./pages/admin/Listings"));
 const AdminVerifications = lazy(() => import("./pages/admin/Verifications"));
+const AdminAuditLogs = lazy(() => import("./pages/admin/AuditLogs"));
 
 const queryClient = new QueryClient();
 
@@ -39,6 +40,7 @@ const App = () => (
                   <Route path="users" element={<AdminUsers />} />
                   <Route path="listings" element={<AdminListings />} />
                   <Route path="verifications" element={<AdminVerifications />} />
+                  <Route path="audit-logs" element={<AdminAuditLogs />} />
                 </Route>
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

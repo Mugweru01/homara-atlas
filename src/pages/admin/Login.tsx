@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
+import { adminLoginSchema } from '@/lib/validation-schemas';
 
 export default function AdminLogin() {
   const { isAdmin, loading, signIn } = useAdmin();
@@ -35,6 +36,16 @@ export default function AdminLogin() {
     e.preventDefault();
     setError('');
     setIsLoading(true);
+
+    // Validate inputs
+    const validation = adminLoginSchema.safeParse({ email, adminCode });
+    if (!validation.success) {
+      const firstError = validation.error.errors[0].message;
+      setError(firstError);
+      toast.error('Validation failed', { description: firstError });
+      setIsLoading(false);
+      return;
+    }
 
     const { error } = await signIn(email, adminCode);
 
