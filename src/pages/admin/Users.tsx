@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { logger } from '@/lib/production-logger';
 import {
   Table,
   TableBody,
@@ -52,7 +53,7 @@ export default function AdminUsers() {
 
       setUsers(data || []);
     } catch (error) {
-      console.error('Error fetching users:', error);
+      logger.error('Error fetching users', { error });
       toast.error('Failed to load users');
     } finally {
       setLoading(false);
@@ -73,7 +74,7 @@ export default function AdminUsers() {
       );
       fetchUsers();
     } catch (error) {
-      console.error('Error updating user:', error);
+      logger.error('Error updating user verification', { error, userId });
       toast.error('Failed to update user');
     }
   };

@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { logger } from '@/lib/production-logger';
 import {
   Table,
   TableBody,
@@ -53,7 +54,7 @@ export default function AdminListings() {
 
       setProperties(data || []);
     } catch (error) {
-      console.error('Error fetching properties:', error);
+      logger.error('Error fetching properties', { error });
       toast.error('Failed to load properties');
     } finally {
       setLoading(false);
@@ -75,7 +76,7 @@ export default function AdminListings() {
       toast.success(`Property ${status}`);
       fetchProperties();
     } catch (error) {
-      console.error('Error updating property:', error);
+      logger.error('Error updating property approval status', { error, propertyId, status });
       toast.error('Failed to update property');
     }
   };

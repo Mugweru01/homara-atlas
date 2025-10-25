@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { logger } from '@/lib/production-logger';
 import {
   Table,
   TableBody,
@@ -57,7 +58,7 @@ export default function AdminVerifications() {
 
       setVerifications(data || []);
     } catch (error) {
-      console.error('Error fetching verifications:', error);
+      logger.error('Error fetching verifications', { error });
       toast.error('Failed to load verifications');
     } finally {
       setLoading(false);
@@ -83,7 +84,7 @@ export default function AdminVerifications() {
       toast.success('Verification approved');
       fetchVerifications();
     } catch (error) {
-      console.error('Error approving verification:', error);
+      logger.error('Error approving verification', { error, verificationId });
       toast.error('Failed to approve verification');
     }
   };
@@ -112,7 +113,7 @@ export default function AdminVerifications() {
       setRejectionReason('');
       fetchVerifications();
     } catch (error) {
-      console.error('Error rejecting verification:', error);
+      logger.error('Error rejecting verification', { error, verificationId: selectedVerification.id });
       toast.error('Failed to reject verification');
     }
   };

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, Home, ShieldCheck, AlertCircle } from 'lucide-react';
+import { logger } from '@/lib/production-logger';
 
 interface DashboardStats {
   total_users: number;
@@ -30,7 +31,7 @@ export default function AdminDashboard() {
         setStats(data as unknown as DashboardStats);
       }
     } catch (error) {
-      console.error('Error fetching stats:', error);
+      logger.error('Error fetching dashboard stats', { error });
     } finally {
       setLoading(false);
     }

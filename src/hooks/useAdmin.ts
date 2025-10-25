@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User, Session } from '@supabase/supabase-js';
+import { logger } from '@/lib/production-logger';
 
 export interface AdminInfo {
   id: string;
@@ -58,13 +59,13 @@ export function useAdmin() {
         .single();
 
       if (error) {
-        console.error('Admin check error:', error);
+        logger.warn('Admin check error', { error, userId });
         setAdminInfo(null);
       } else {
         setAdminInfo(data);
       }
     } catch (error) {
-      console.error('Admin status check failed:', error);
+      logger.error('Admin status check failed', { error, userId });
       setAdminInfo(null);
     } finally {
       setLoading(false);

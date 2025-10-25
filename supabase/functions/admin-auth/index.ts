@@ -1,8 +1,12 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
+// Secure CORS configuration - only allow specific origins
+const cors Headers = {
+  'Access-Control-Allow-Origin': Deno.env.get('ADMIN_ORIGIN') || 'https://admin.homara.com',
+  'Access-Control-Allow-Credentials': 'true',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Max-Age': '86400', // 24 hours
 }
 
 Deno.serve(async (req) => {
