@@ -2,6 +2,7 @@ import { Outlet, Link, useLocation, Navigate } from 'react-router-dom';
 import { useAdmin } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   LayoutDashboard,
   Users,
@@ -128,6 +129,7 @@ export function AdminLayout() {
             <Menu className="h-5 w-5" />
           </Button>
           <div className="flex-1" />
+          <ThemeToggle />
         </header>
 
         <main className="flex-1 overflow-auto p-6">
