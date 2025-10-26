@@ -1,7 +1,7 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
 
 // Secure CORS configuration - only allow specific origins
-const cors Headers = {
+const corsHeaders = {
   'Access-Control-Allow-Origin': Deno.env.get('ADMIN_ORIGIN') || 'https://admin.homara.com',
   'Access-Control-Allow-Credentials': 'true',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',

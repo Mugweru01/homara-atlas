@@ -62,7 +62,7 @@ class ProductionLogger {
    */
   info(message: string, ...args: unknown[]): void {
     if (this.shouldLog("info")) {
-      logger.info(this.formatMessage("info", message), ...args);
+      console.info(this.formatMessage("info", message), ...args);
     }
   }
 
@@ -71,7 +71,7 @@ class ProductionLogger {
    */
   warn(message: string, ...args: unknown[]): void {
     if (this.shouldLog("warn")) {
-      logger.warn(this.formatMessage("warn", message), ...args);
+      console.warn(this.formatMessage("warn", message), ...args);
     }
   }
 
@@ -83,9 +83,9 @@ class ProductionLogger {
 
     // Always log errors to console
     if (error instanceof Error) {
-      logger.error(formattedMessage, error.message, error.stack, ...args);
+      console.error(formattedMessage, error.message, error.stack, ...args);
     } else {
-      logger.error(formattedMessage, error, ...args);
+      console.error(formattedMessage, error, ...args);
     }
 
     // Send to monitoring service in production
@@ -122,7 +122,7 @@ class ProductionLogger {
       }
     } catch (monitoringError) {
       // Silently fail if monitoring is not available
-      logger.error("Failed to send to monitoring:", monitoringError);
+      console.error("Failed to send to monitoring:", monitoringError);
     }
   }
 
