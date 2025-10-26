@@ -40,15 +40,15 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { 
-  Search, 
-  CheckCircle, 
-  XCircle, 
-  Home as HomeIcon, 
-  Filter, 
-  MapPin, 
-  DollarSign, 
-  RefreshCw, 
+import {
+  Search,
+  CheckCircle,
+  XCircle,
+  Home as HomeIcon,
+  Filter,
+  MapPin,
+  DollarSign,
+  RefreshCw,
   Download,
   Eye,
   Image as ImageIcon,
@@ -63,7 +63,7 @@ import {
   User,
   Bed,
   Bath,
-  Maximize
+  Maximize,
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -80,7 +80,7 @@ interface Property {
   bathrooms: number | null;
   square_feet: number | null;
   property_type: string | null;
-  images_json: any | null;
+  images_json: unknown | null;
   landlord_id: string;
   rejection_reason: string | null;
   // Computed field
@@ -99,7 +99,7 @@ export default function AdminListings() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedProperties, setSelectedProperties] = useState<string[]>([]);
-  
+
   // Dialog states
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
@@ -110,9 +110,10 @@ export default function AdminListings() {
 
   useEffect(() => {
     fetchProperties();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const processPropertyImages = (imagesJson: any): string[] => {
+  const processPropertyImages = (imagesJson: unknown): string[] => {
     // Handle null or undefined
     if (!imagesJson) {
       return [];
@@ -120,23 +121,35 @@ export default function AdminListings() {
 
     // If it's already an array of strings, return it
     if (Array.isArray(imagesJson)) {
-      return imagesJson.filter(img => typeof img === 'string');
+      return imagesJson.filter((img): img is string => typeof img === 'string');
     }
 
     // If it's an object with urls property
-    if (typeof imagesJson === 'object' && Array.isArray(imagesJson.urls)) {
-      return imagesJson.urls.filter((img: any) => typeof img === 'string');
+    if (
+      typeof imagesJson === 'object' &&
+      'urls' in imagesJson &&
+      Array.isArray((imagesJson as Record<string, unknown>).urls)
+    ) {
+      return ((imagesJson as Record<string, unknown>).urls as unknown[]).filter(
+        (img): img is string => typeof img === 'string'
+      );
     }
 
     // If it's an object with images property
-    if (typeof imagesJson === 'object' && Array.isArray(imagesJson.images)) {
-      return imagesJson.images.filter((img: any) => typeof img === 'string');
+    if (
+      typeof imagesJson === 'object' &&
+      'images' in imagesJson &&
+      Array.isArray((imagesJson as Record<string, unknown>).images)
+    ) {
+      return ((imagesJson as Record<string, unknown>).images as unknown[]).filter(
+        (img): img is string => typeof img === 'string'
+      );
     }
 
     // Try to parse as JSON string
     if (typeof imagesJson === 'string') {
       try {
-        const parsed = JSON.parse(imagesJson);
+        const parsed: unknown = JSON.parse(imagesJson);
         return processPropertyImages(parsed);
       } catch {
         // If parsing fails, might be a single URL
@@ -158,22 +171,22 @@ export default function AdminListings() {
       if (propertiesError) throw propertiesError;
 
       // Parse images_json to images array
-      const processedData = (propertiesData || []).map(property => {
+      const processedData = (propertiesData || []).map((property) => {
         const images = processPropertyImages(property.images_json);
-        
+
         // Log for debugging (first property only)
         if (property === propertiesData[0] && property.images_json) {
-          logger.info('Sample property image data', { 
+          logger.info('Sample property image data', {
             propertyId: property.id,
             imagesJsonType: typeof property.images_json,
             imagesJson: property.images_json,
-            processedImages: images
+            processedImages: images,
           });
         }
 
         return {
           ...property,
-          images
+          images,
         };
       });
 
@@ -181,8 +194,8 @@ export default function AdminListings() {
 
       // Fetch landlord information
       if (propertiesData && propertiesData.length > 0) {
-        const landlordIds = [...new Set(propertiesData.map(p => p.landlord_id))];
-        
+        const landlordIds = [...new Set(propertiesData.map((p) => p.landlord_id))];
+
         const { data: landlordsData, error: landlordsError } = await supabase
           .from('profiles')
           .select('id, full_name, email')
@@ -194,10 +207,10 @@ export default function AdminListings() {
 
         if (landlordsData) {
           const landlordsMap: Record<string, LandlordProfile> = {};
-          landlordsData.forEach(landlord => {
+          landlordsData.forEach((landlord) => {
             landlordsMap[landlord.id] = {
               full_name: landlord.full_name,
-              email: landlord.email
+              email: landlord.email,
             };
           });
           setLandlords(landlordsMap);
@@ -207,13 +220,15 @@ export default function AdminListings() {
       toast.success('Properties loaded successfully');
       console.log('Loaded properties with images:', {
         totalProperties: processedData.length,
-        propertiesWithImages: processedData.filter(p => p.images && p.images.length > 0).length,
-        sampleProperty: processedData[0] ? {
-          id: processedData[0].id,
-          title: processedData[0].title,
-          imagesCount: processedData[0].images?.length || 0,
-          images: processedData[0].images
-        } : null
+        propertiesWithImages: processedData.filter((p) => p.images && p.images.length > 0).length,
+        sampleProperty: processedData[0]
+          ? {
+              id: processedData[0].id,
+              title: processedData[0].title,
+              imagesCount: processedData[0].images?.length || 0,
+              images: processedData[0].images,
+            }
+          : null,
       });
     } catch (error) {
       logger.error('Error fetching properties', { error });
@@ -225,27 +240,29 @@ export default function AdminListings() {
 
   const updateApprovalStatus = async (propertyId: string, status: string, reason?: string) => {
     try {
-      const updateData: any = { 
+      const updateData: {
+        approval_status: string;
+        is_active: boolean;
+        rejection_reason?: string;
+      } = {
         approval_status: status,
-        is_active: status === 'approved'
+        is_active: status === 'approved',
       };
 
       if (status === 'declined' && reason) {
         updateData.rejection_reason = reason;
       }
 
-      const { error } = await supabase
-        .from('properties')
-        .update(updateData)
-        .eq('id', propertyId);
+      const { error } = await supabase.from('properties').update(updateData).eq('id', propertyId);
 
       if (error) throw error;
 
       const action = status === 'approved' ? 'approved' : 'declined';
       toast.success(`Property ${action} successfully`, {
-        description: status === 'approved' 
-          ? 'Property is now visible to users' 
-          : 'Property has been declined and is hidden',
+        description:
+          status === 'approved'
+            ? 'Property is now visible to users'
+            : 'Property has been declined and is hidden',
       });
       fetchProperties();
     } catch (error) {
@@ -260,9 +277,9 @@ export default function AdminListings() {
     try {
       const { error } = await supabase
         .from('properties')
-        .update({ 
+        .update({
           approval_status: 'approved',
-          is_active: true
+          is_active: true,
         })
         .in('id', selectedProperties);
 
@@ -283,10 +300,10 @@ export default function AdminListings() {
     try {
       const { error } = await supabase
         .from('properties')
-        .update({ 
+        .update({
           approval_status: 'declined',
           is_active: false,
-          rejection_reason: 'Bulk rejection by admin'
+          rejection_reason: 'Bulk rejection by admin',
         })
         .in('id', selectedProperties);
 
@@ -330,10 +347,8 @@ export default function AdminListings() {
   };
 
   const toggleSelectProperty = (propertyId: string) => {
-    setSelectedProperties(prev =>
-      prev.includes(propertyId)
-        ? prev.filter(id => id !== propertyId)
-        : [...prev, propertyId]
+    setSelectedProperties((prev) =>
+      prev.includes(propertyId) ? prev.filter((id) => id !== propertyId) : [...prev, propertyId]
     );
   };
 
@@ -341,23 +356,34 @@ export default function AdminListings() {
     if (selectedProperties.length === filteredProperties.length) {
       setSelectedProperties([]);
     } else {
-      setSelectedProperties(filteredProperties.map(p => p.id));
+      setSelectedProperties(filteredProperties.map((p) => p.id));
     }
   };
 
   const exportProperties = () => {
     const csv = [
-      ['Title', 'Location', 'Price (KES)', 'Status', 'Bedrooms', 'Bathrooms', 'Landlord', 'Created'].join(','),
-      ...filteredProperties.map(property => [
-        property.title,
-        property.location_name || 'N/A',
-        property.price_kes || 0,
-        property.approval_status,
-        property.bedrooms || 0,
-        property.bathrooms || 0,
-        landlords[property.landlord_id]?.full_name || 'N/A',
-        new Date(property.created_at).toLocaleDateString(),
-      ].join(','))
+      [
+        'Title',
+        'Location',
+        'Price (KES)',
+        'Status',
+        'Bedrooms',
+        'Bathrooms',
+        'Landlord',
+        'Created',
+      ].join(','),
+      ...filteredProperties.map((property) =>
+        [
+          property.title,
+          property.location_name || 'N/A',
+          property.price_kes || 0,
+          property.approval_status,
+          property.bedrooms || 0,
+          property.bathrooms || 0,
+          landlords[property.landlord_id]?.full_name || 'N/A',
+          new Date(property.created_at).toLocaleDateString(),
+        ].join(',')
+      ),
     ].join('\n');
 
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -376,8 +402,7 @@ export default function AdminListings() {
       property.location_name?.toLowerCase().includes(search.toLowerCase()) ||
       landlords[property.landlord_id]?.full_name?.toLowerCase().includes(search.toLowerCase());
 
-    const matchesStatus =
-      statusFilter === 'all' || property.approval_status === statusFilter;
+    const matchesStatus = statusFilter === 'all' || property.approval_status === statusFilter;
 
     return matchesSearch && matchesStatus;
   });
@@ -385,9 +410,9 @@ export default function AdminListings() {
   const getStatusStats = () => {
     return {
       total: properties.length,
-      pending: properties.filter(p => p.approval_status === 'pending').length,
-      approved: properties.filter(p => p.approval_status === 'approved').length,
-      declined: properties.filter(p => p.approval_status === 'declined').length,
+      pending: properties.filter((p) => p.approval_status === 'pending').length,
+      approved: properties.filter((p) => p.approval_status === 'approved').length,
+      declined: properties.filter((p) => p.approval_status === 'declined').length,
     };
   };
 
@@ -414,7 +439,11 @@ export default function AdminListings() {
         </div>
         <div className="grid gap-4 md:grid-cols-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-24 bg-muted/20 rounded-xl animate-shimmer" style={{ animationDelay: `${i * 50}ms` }}></div>
+            <div
+              key={i}
+              className="h-24 bg-muted/20 rounded-xl animate-shimmer"
+              style={{ animationDelay: `${i * 50}ms` }}
+            ></div>
           ))}
         </div>
         <Card className="border-border/50">
@@ -424,7 +453,11 @@ export default function AdminListings() {
           <CardContent>
             <div className="space-y-2">
               {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="h-24 bg-muted/20 rounded animate-shimmer" style={{ animationDelay: `${i * 50}ms` }}></div>
+                <div
+                  key={i}
+                  className="h-24 bg-muted/20 rounded animate-shimmer"
+                  style={{ animationDelay: `${i * 50}ms` }}
+                ></div>
               ))}
             </div>
           </CardContent>
@@ -449,14 +482,20 @@ export default function AdminListings() {
       </div>
 
       {/* Status Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-4 animate-fade-up" style={{ animationDelay: '100ms' }}>
+      <div
+        className="grid gap-4 md:grid-cols-4 animate-fade-up"
+        style={{ animationDelay: '100ms' }}
+      >
         {[
           { label: 'Total', value: stats.total, color: 'primary', icon: HomeIcon },
           { label: 'Pending Review', value: stats.pending, color: 'warning', icon: Filter },
           { label: 'Approved', value: stats.approved, color: 'success', icon: CheckCircle },
           { label: 'Declined', value: stats.declined, color: 'destructive', icon: XCircle },
         ].map((stat, index) => (
-          <Card key={stat.label} className="border-border/50 hover:shadow-md transition-all duration-300 hover:scale-[1.02]">
+          <Card
+            key={stat.label}
+            className="border-border/50 hover:shadow-md transition-all duration-300 hover:scale-[1.02]"
+          >
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -474,15 +513,19 @@ export default function AdminListings() {
 
       {/* Bulk Actions Bar */}
       {selectedProperties.length > 0 && (
-        <Card className="border-primary/50 shadow-glow animate-fade-up" style={{ animationDelay: '150ms' }}>
+        <Card
+          className="border-primary/50 shadow-glow animate-fade-up"
+          style={{ animationDelay: '150ms' }}
+        >
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <p className="text-sm font-medium">
-                <span className="text-primary font-bold">{selectedProperties.length}</span> property{selectedProperties.length > 1 ? 'ies' : ''} selected
+                <span className="text-primary font-bold">{selectedProperties.length}</span> property
+                {selectedProperties.length > 1 ? 'ies' : ''} selected
               </p>
               <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={handleBulkApprove}
                   className="hover:bg-success/10 hover:text-success hover:border-success/50"
@@ -490,8 +533,8 @@ export default function AdminListings() {
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Approve All
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={handleBulkReject}
                   className="hover:bg-destructive/10 hover:text-destructive hover:border-destructive/50"
@@ -499,11 +542,7 @@ export default function AdminListings() {
                   <XCircle className="h-4 w-4 mr-2" />
                   Decline All
                 </Button>
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={() => setSelectedProperties([])}
-                >
+                <Button variant="outline" size="sm" onClick={() => setSelectedProperties([])}>
                   Cancel
                 </Button>
               </div>
@@ -513,13 +552,16 @@ export default function AdminListings() {
       )}
 
       {/* Main Card */}
-      <Card className="border-border/50 shadow-soft animate-fade-up" style={{ animationDelay: '200ms' }}>
+      <Card
+        className="border-border/50 shadow-soft animate-fade-up"
+        style={{ animationDelay: '200ms' }}
+      >
         <CardHeader className="border-b border-border/50 bg-gradient-to-r from-card to-card/50">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xl font-semibold">All Listings</CardTitle>
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={fetchProperties}
                 className="hover:bg-accent hover:scale-105 transition-all duration-200"
@@ -527,8 +569,8 @@ export default function AdminListings() {
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Refresh
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 size="sm"
                 onClick={exportProperties}
                 className="hover:bg-accent hover:scale-105 transition-all duration-200"
@@ -539,7 +581,7 @@ export default function AdminListings() {
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent className="p-6">
           {/* Filters */}
           <div className="flex flex-wrap gap-3 mb-6">
@@ -573,7 +615,10 @@ export default function AdminListings() {
                 <TableRow className="bg-muted/50 hover:bg-muted/50 border-b border-border/50">
                   <TableHead className="w-12">
                     <Checkbox
-                      checked={selectedProperties.length === filteredProperties.length && filteredProperties.length > 0}
+                      checked={
+                        selectedProperties.length === filteredProperties.length &&
+                        filteredProperties.length > 0
+                      }
                       onCheckedChange={toggleSelectAll}
                     />
                   </TableHead>
@@ -605,8 +650,8 @@ export default function AdminListings() {
                   </TableRow>
                 ) : (
                   filteredProperties.map((property, index) => (
-                    <TableRow 
-                      key={property.id} 
+                    <TableRow
+                      key={property.id}
                       className="group hover:bg-accent/50 transition-all duration-200 border-b border-border/30 animate-fade-in"
                       style={{ animationDelay: `${index * 30}ms` }}
                     >
@@ -642,7 +687,9 @@ export default function AdminListings() {
                                     <div className="w-full h-full bg-muted flex items-center justify-center">
                                       <div className="text-center">
                                         <ImageIcon className="h-5 w-5 mx-auto mb-1 text-muted-foreground" />
-                                        <span className="text-xs font-semibold">+{property.images.length - 1}</span>
+                                        <span className="text-xs font-semibold">
+                                          +{property.images.length - 1}
+                                        </span>
                                       </div>
                                     </div>
                                   ) : (
@@ -720,13 +767,19 @@ export default function AdminListings() {
                           </Badge>
                         )}
                         {property.approval_status === 'pending' && (
-                          <Badge variant="outline" className="border-warning text-warning hover:bg-warning/10 transition-colors font-medium">
+                          <Badge
+                            variant="outline"
+                            className="border-warning text-warning hover:bg-warning/10 transition-colors font-medium"
+                          >
                             <div className="h-1.5 w-1.5 rounded-full bg-warning mr-1.5 animate-pulse"></div>
                             Pending
                           </Badge>
                         )}
                         {property.approval_status === 'declined' && (
-                          <Badge variant="outline" className="border-destructive text-destructive hover:bg-destructive/10 transition-colors font-medium">
+                          <Badge
+                            variant="outline"
+                            className="border-destructive text-destructive hover:bg-destructive/10 transition-colors font-medium"
+                          >
                             <XCircle className="h-3 w-3 mr-1" />
                             Declined
                           </Badge>
@@ -754,7 +807,7 @@ export default function AdminListings() {
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             {property.approval_status !== 'approved' && (
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 onClick={() => updateApprovalStatus(property.id, 'approved')}
                                 className="text-success"
                               >
@@ -763,7 +816,7 @@ export default function AdminListings() {
                               </DropdownMenuItem>
                             )}
                             {property.approval_status !== 'declined' && (
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 onClick={() => openRejectDialog(property)}
                                 className="text-destructive"
                               >
@@ -785,7 +838,9 @@ export default function AdminListings() {
           {filteredProperties.length > 0 && (
             <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
               <p>
-                Showing <span className="font-medium text-foreground">{filteredProperties.length}</span> of <span className="font-medium text-foreground">{properties.length}</span> properties
+                Showing{' '}
+                <span className="font-medium text-foreground">{filteredProperties.length}</span> of{' '}
+                <span className="font-medium text-foreground">{properties.length}</span> properties
               </p>
               <p className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-success animate-pulse"></span>
@@ -806,9 +861,7 @@ export default function AdminListings() {
               </div>
               <div>
                 <DialogTitle className="text-xl">Property Details</DialogTitle>
-                <DialogDescription>
-                  Complete information about this property
-                </DialogDescription>
+                <DialogDescription>Complete information about this property</DialogDescription>
               </div>
             </div>
           </DialogHeader>
@@ -859,7 +912,9 @@ export default function AdminListings() {
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Type</p>
-                      <p className="font-medium capitalize">{selectedProperty.property_type || 'N/A'}</p>
+                      <p className="font-medium capitalize">
+                        {selectedProperty.property_type || 'N/A'}
+                      </p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Location</p>
@@ -867,7 +922,9 @@ export default function AdminListings() {
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Price</p>
-                      <p className="font-medium">KES {selectedProperty.price_kes?.toLocaleString()}</p>
+                      <p className="font-medium">
+                        KES {selectedProperty.price_kes?.toLocaleString()}
+                      </p>
                     </div>
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Bedrooms</p>
@@ -880,12 +937,16 @@ export default function AdminListings() {
                     {selectedProperty.square_feet && (
                       <div>
                         <p className="text-xs text-muted-foreground mb-1">Square Feet</p>
-                        <p className="font-medium">{selectedProperty.square_feet.toLocaleString()}</p>
+                        <p className="font-medium">
+                          {selectedProperty.square_feet.toLocaleString()}
+                        </p>
                       </div>
                     )}
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Landlord</p>
-                      <p className="font-medium">{landlords[selectedProperty.landlord_id]?.full_name || 'Unknown'}</p>
+                      <p className="font-medium">
+                        {landlords[selectedProperty.landlord_id]?.full_name || 'Unknown'}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -895,7 +956,9 @@ export default function AdminListings() {
                     <Separator />
                     <div className="space-y-3">
                       <h3 className="font-semibold">Description</h3>
-                      <p className="text-sm text-muted-foreground">{selectedProperty.description}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedProperty.description}
+                      </p>
                     </div>
                   </>
                 )}
@@ -928,7 +991,9 @@ export default function AdminListings() {
                   {selectedProperty.rejection_reason && (
                     <div className="p-3 bg-destructive/10 rounded-lg border border-destructive/20">
                       <p className="text-xs text-muted-foreground mb-1">Rejection Reason</p>
-                      <p className="text-sm text-destructive">{selectedProperty.rejection_reason}</p>
+                      <p className="text-sm text-destructive">
+                        {selectedProperty.rejection_reason}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -951,7 +1016,7 @@ export default function AdminListings() {
                           month: 'long',
                           day: 'numeric',
                           hour: '2-digit',
-                          minute: '2-digit'
+                          minute: '2-digit',
                         })}
                       </span>
                     </div>
@@ -1027,7 +1092,8 @@ export default function AdminListings() {
                 className="resize-none"
               />
               <p className="text-xs text-muted-foreground">
-                The landlord will be notified with this reason • {rejectionReason.length}/500 characters
+                The landlord will be notified with this reason • {rejectionReason.length}/500
+                characters
               </p>
             </div>
           </div>
