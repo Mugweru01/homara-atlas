@@ -1,0 +1,31 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+echo "🔍 Running pre-push checks..."
+
+# Check for uncommitted changes
+if ! git diff-index --quiet HEAD --; then
+  echo "❌ Error: You have uncommitted changes. Please commit or stash them before pushing."
+  exit 1
+fi
+
+# Run full linting
+echo "🔎 Running ESLint..."
+npm run lint
+
+# Run TypeScript check
+echo "🔎 Checking TypeScript..."
+npm run type-check
+
+# Run tests if they exist
+if grep -q '"test"' package.json; then
+  echo "🧪 Running tests..."
+  npm test
+fi
+
+# Security audit
+echo "🔒 Running security audit..."
+npm audit --audit-level=moderate
+
+echo "✅ Pre-push checks passed! Pushing to remote..."
+
