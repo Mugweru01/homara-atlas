@@ -1,4 +1,31 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+
 const Index = () => {
+  const [logoUrl, setLogoUrl] = useState<string>('/placeholder.svg');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        // Get the public URL for the logo from storage
+        const { data } = supabase.storage
+          .from('logo')
+          .getPublicUrl('logo.png');
+        
+        if (data?.publicUrl) {
+          setLogoUrl(data.publicUrl);
+        }
+      } catch (error) {
+        console.error('Error fetching logo:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchLogo();
+  }, []);
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-background">
       {/* Animated Background Gradient Mesh */}
@@ -24,11 +51,19 @@ const Index = () => {
           <div className="relative inline-flex items-center justify-center mb-8">
             <div className="absolute inset-0 bg-gradient-to-r from-primary to-primary-glow opacity-20 blur-2xl rounded-full scale-150 animate-pulse"></div>
             <div className="relative p-6 bg-gradient-to-br from-card/80 to-card/40 backdrop-blur-xl rounded-3xl shadow-glow border border-primary/20">
-              <img 
-                src="/placeholder.svg" 
-                alt="Homara Logo" 
-                className="h-24 w-24 animate-bounce-subtle" 
-              />
+              {isLoading ? (
+                <div className="h-24 w-24 animate-pulse bg-muted rounded-lg" />
+              ) : (
+                <img 
+                  src={logoUrl} 
+                  alt="Homara Logo" 
+                  className="h-24 w-24 animate-bounce-subtle object-contain" 
+                  onError={(e) => {
+                    // Fallback to placeholder if logo fails to load
+                    e.currentTarget.src = '/placeholder.svg';
+                  }}
+                />
+              )}
             </div>
           </div>
           

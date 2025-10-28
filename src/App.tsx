@@ -15,9 +15,20 @@ const AdminDashboard = lazy(() => import("./pages/admin/Dashboard"));
 const AdminUsers = lazy(() => import("./pages/admin/Users"));
 const AdminListings = lazy(() => import("./pages/admin/Listings"));
 const AdminVerifications = lazy(() => import("./pages/admin/Verifications"));
+const AdminMonitoring = lazy(() => import("./pages/admin/Monitoring"));
+const AdminSecurity = lazy(() => import("./pages/admin/Security"));
+const AdminBackups = lazy(() => import("./pages/admin/Backups"));
+const AdminReports = lazy(() => import("./pages/admin/Reports"));
+const AdminAnalytics = lazy(() => import("./pages/admin/Analytics"));
+const AdminReportBuilder = lazy(() => import("./pages/admin/ReportBuilder"));
+const AdminPerformance = lazy(() => import("./pages/admin/Performance"));
+const AdminDashboardSettings = lazy(() => import("./pages/admin/DashboardSettings"));
+const AdminMyTasks = lazy(() => import("./pages/admin/MyTasks"));
+const AdminSecurityCenter = lazy(() => import("./pages/admin/SecurityCenter"));
 const AdminAuditLogs = lazy(() => import("./pages/admin/AuditLogs"));
 const AdminAdmins = lazy(() => import("./pages/admin/Admins"));
 const AdminSettings = lazy(() => import("./pages/admin/Settings"));
+const AdminKnowledgeBase = lazy(() => import("./pages/admin/KnowledgeBase"));
 
 const queryClient = new QueryClient();
 
@@ -42,9 +53,20 @@ const App = () => (
                   <Route path="users" element={<AdminUsers />} />
                   <Route path="listings" element={<AdminListings />} />
                   <Route path="verifications" element={<AdminVerifications />} />
+                  <Route path="monitoring" element={<AdminMonitoring />} />
+                  <Route path="security" element={<AdminSecurity />} />
+                  <Route path="backups" element={<AdminBackups />} />
+                  <Route path="reports" element={<AdminReports />} />
+                  <Route path="analytics" element={<AdminAnalytics />} />
+                  <Route path="report-builder" element={<AdminReportBuilder />} />
+                  <Route path="performance" element={<AdminPerformance />} />
+                  <Route path="dashboard-settings" element={<AdminDashboardSettings />} />
+                  <Route path="my-tasks" element={<AdminMyTasks />} />
+                  <Route path="security-center" element={<AdminSecurityCenter />} />
                   <Route path="audit-logs" element={<AdminAuditLogs />} />
                   <Route path="admins" element={<AdminAdmins />} />
                   <Route path="settings" element={<AdminSettings />} />
+                  <Route path="knowledge-base" element={<AdminKnowledgeBase />} />
                 </Route>
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />

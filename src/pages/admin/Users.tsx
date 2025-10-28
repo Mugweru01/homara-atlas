@@ -598,7 +598,7 @@ export default function AdminUsers() {
                               Edit User
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => toggleVerification(user.id, user.is_verified)}>
-                              {user.is_verified ? (
+                          {user.is_verified ? (
                                 <>
                                   <ShieldOff className="h-4 w-4 mr-2" />
                                   Remove Verification

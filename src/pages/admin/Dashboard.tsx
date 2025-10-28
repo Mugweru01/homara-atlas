@@ -114,9 +114,11 @@ function StatCard({ stat, index }: { stat: StatData; index: number }) {
 export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [layout, setLayout] = useState<any[]>([]);
 
   useEffect(() => {
     fetchStats();
+    fetchLayout();
   }, []);
 
   const fetchStats = async () => {
@@ -133,6 +135,16 @@ export default function AdminDashboard() {
       logger.error('Error fetching dashboard stats', { error });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchLayout = async () => {
+    try {
+      const { data, error } = await supabase.rpc('get_dashboard_layout');
+      if (error) throw error;
+      setLayout(data || []);
+    } catch (error) {
+      logger.error('Error fetching dashboard layout', { error });
     }
   };
 
@@ -163,8 +175,15 @@ export default function AdminDashboard() {
     return '🌙 Good Evening';
   };
 
+  const isWidgetVisible = (widgetId: string) => {
+    if (layout.length === 0) return true; // Show all if no layout saved
+    const widget = layout.find((w: any) => w.id === widgetId);
+    return widget ? widget.visible !== false : true;
+  };
+
   const statCards = [
     {
+      id: 'user_stats',
       title: 'Total Users',
       value: stats?.total_users || 0,
       icon: Users,
@@ -174,6 +193,7 @@ export default function AdminDashboard() {
       subtitle: 'vs last month',
     },
     {
+      id: 'verification_stats',
       title: 'Landlords',
       value: stats?.total_landlords || 0,
       icon: Users,
@@ -183,6 +203,7 @@ export default function AdminDashboard() {
       subtitle: 'vs last month',
     },
     {
+      id: 'listing_stats',
       title: 'Active Properties',
       value: stats?.active_properties || 0,
       icon: Home,
@@ -192,6 +213,7 @@ export default function AdminDashboard() {
       subtitle: 'vs last month',
     },
     {
+      id: 'pending_verifications',
       title: 'Pending Verifications',
       value: stats?.pending_verifications || 0,
       icon: ShieldCheck,
@@ -199,7 +221,7 @@ export default function AdminDashboard() {
       bgColor: 'bg-warning/10',
       subtitle: 'Needs attention',
     },
-  ];
+  ].filter(card => isWidgetVisible(card.id));
 
   return (
     <div className="space-y-8">
@@ -219,7 +241,7 @@ export default function AdminDashboard() {
       </div>
 
       {/* Alert Card for Pending Verifications */}
-      {stats && stats.pending_verifications > 0 && (
+      {stats && stats.pending_verifications > 0 && isWidgetVisible('pending_verifications') && (
         <Card className="relative overflow-hidden border-warning/50 bg-gradient-to-br from-warning/5 via-warning/10 to-warning/5 animate-fade-up shadow-lg">
           {/* Animated Border */}
           <div className="absolute inset-0 bg-gradient-to-r from-warning/20 via-warning/40 to-warning/20 animate-gradient"></div>
@@ -278,6 +300,7 @@ export default function AdminDashboard() {
       )}
 
       {/* Quick Actions */}
+      {isWidgetVisible('quick_actions') && (
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {[
           {
@@ -340,6 +363,7 @@ export default function AdminDashboard() {
           </Link>
         ))}
       </div>
+      )}
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { logger } from '@/lib/production-logger';
 import {
   Table,
@@ -39,6 +40,10 @@ import { toast } from 'sonner';
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { BulkActionsBar } from '@/components/admin/BulkActionsBar';
+import { AdvancedFilter, FilterCriteria } from '@/components/admin/AdvancedFilter';
+import { ExportButton } from '@/components/admin/ExportButton';
+import { formatDateForExport, formatBooleanForExport } from '@/lib/export-utils';
 
 interface LandlordProfile {
   full_name: string | null;
@@ -64,21 +69,28 @@ interface Verification {
 
 export default function AdminVerifications() {
   const [verifications, setVerifications] = useState<Verification[]>([]);
+  const [filteredVerifications, setFilteredVerifications] = useState<Verification[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedVerification, setSelectedVerification] = useState<Verification | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [filterCriteria, setFilterCriteria] = useState<FilterCriteria>({});
 
   useEffect(() => {
     fetchVerifications();
   }, []);
 
+  useEffect(() => {
+    applyFilters();
+  }, [verifications, filterCriteria]);
+
   const fetchVerifications = async () => {
     setLoading(true);
     try {
       // Fetch verifications first
-      const { data: verificationsData, error: verificationsError } = await supabase
+      const { data: verificationsData, error: verificationsError} = await supabase
         .from('landlord_verifications')
         .select('*')
         .order('submitted_at', { ascending: false });
@@ -181,13 +193,123 @@ export default function AdminVerifications() {
     setIsDetailsDialogOpen(true);
   };
 
+  const applyFilters = () => {
+    let filtered = [...verifications];
+
+    // Apply search filter
+    if (filterCriteria.search) {
+      const searchLower = filterCriteria.search.toLowerCase();
+      filtered = filtered.filter(v => 
+        v.landlord?.full_name?.toLowerCase().includes(searchLower) ||
+        v.landlord?.email?.toLowerCase().includes(searchLower) ||
+        v.verification_email?.toLowerCase().includes(searchLower) ||
+        v.verification_phone?.includes(searchLower)
+      );
+    }
+
+    // Apply status filter
+    if (filterCriteria.status) {
+      filtered = filtered.filter(v => v.status === filterCriteria.status);
+    }
+
+    // Apply trust score filter
+    if (filterCriteria.trust_score_min) {
+      filtered = filtered.filter(v => v.trust_score >= Number(filterCriteria.trust_score_min));
+    }
+    if (filterCriteria.trust_score_max) {
+      filtered = filtered.filter(v => v.trust_score <= Number(filterCriteria.trust_score_max));
+    }
+
+    // Apply verification status filters
+    if (filterCriteria.email_verified !== undefined) {
+      filtered = filtered.filter(v => v.email_verified === (filterCriteria.email_verified === 'true'));
+    }
+    if (filterCriteria.phone_verified !== undefined) {
+      filtered = filtered.filter(v => v.phone_verified === (filterCriteria.phone_verified === 'true'));
+    }
+    if (filterCriteria.identity_verified !== undefined) {
+      filtered = filtered.filter(v => v.identity_verified === (filterCriteria.identity_verified === 'true'));
+    }
+
+    setFilteredVerifications(filtered);
+  };
+
   const getStatusStats = () => {
     return {
-      total: verifications.length,
-      pending: verifications.filter(v => v.status === 'pending').length,
-      approved: verifications.filter(v => v.status === 'approved').length,
-      rejected: verifications.filter(v => v.status === 'rejected').length,
+      total: filteredVerifications.length,
+      pending: filteredVerifications.filter(v => v.status === 'pending').length,
+      approved: filteredVerifications.filter(v => v.status === 'approved').length,
+      rejected: filteredVerifications.filter(v => v.status === 'rejected').length,
     };
+  };
+
+  // Bulk selection handlers
+  const toggleSelection = (id: string) => {
+    const newSelected = new Set(selectedIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredVerifications.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredVerifications.map(v => v.id)));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+  };
+
+  // Bulk action handler
+  const handleBulkAction = async (action: string, note?: string) => {
+    try {
+      const selectedArray = Array.from(selectedIds);
+      
+      if (action === 'approve') {
+        const { data, error } = await supabase.rpc('bulk_update_verifications', {
+          p_verification_ids: selectedArray,
+          p_status: 'approved',
+          p_admin_notes: note,
+        });
+
+        if (error) throw error;
+        
+        toast.success(`Approved ${data.updated} verification(s)`, {
+          description: data.failed > 0 ? `${data.failed} failed` : undefined
+        });
+        
+        fetchVerifications();
+        return data;
+      } else if (action === 'reject') {
+        const { data, error } = await supabase.rpc('bulk_update_verifications', {
+          p_verification_ids: selectedArray,
+          p_status: 'rejected',
+          p_rejection_reason: note || 'Verification rejected',
+          p_admin_notes: note,
+        });
+
+        if (error) throw error;
+        
+        toast.success(`Rejected ${data.updated} verification(s)`, {
+          description: data.failed > 0 ? `${data.failed} failed` : undefined
+        });
+        
+        fetchVerifications();
+        return data;
+      }
+
+      return { success: false, updated: 0, failed: 0 };
+    } catch (error) {
+      logger.error('Bulk action error', { error, action });
+      toast.error('Bulk action failed');
+      throw error;
+    }
   };
 
   const stats = getStatusStats();
@@ -235,6 +357,66 @@ export default function AdminVerifications() {
         </p>
       </div>
 
+      {/* Advanced Filter */}
+      <AdvancedFilter
+        pageType="verifications"
+        fields={[
+          {
+            key: 'status',
+            label: 'Status',
+            type: 'select',
+            options: [
+              { value: 'pending', label: 'Pending' },
+              { value: 'approved', label: 'Approved' },
+              { value: 'rejected', label: 'Rejected' },
+              { value: 'in_review', label: 'In Review' },
+            ],
+            placeholder: 'Filter by status'
+          },
+          {
+            key: 'trust_score_min',
+            label: 'Min Trust Score',
+            type: 'number',
+            placeholder: 'e.g., 50'
+          },
+          {
+            key: 'trust_score_max',
+            label: 'Max Trust Score',
+            type: 'number',
+            placeholder: 'e.g., 100'
+          },
+          {
+            key: 'email_verified',
+            label: 'Email Verified',
+            type: 'select',
+            options: [
+              { value: 'true', label: 'Yes' },
+              { value: 'false', label: 'No' },
+            ],
+          },
+          {
+            key: 'phone_verified',
+            label: 'Phone Verified',
+            type: 'select',
+            options: [
+              { value: 'true', label: 'Yes' },
+              { value: 'false', label: 'No' },
+            ],
+          },
+          {
+            key: 'identity_verified',
+            label: 'Identity Verified',
+            type: 'select',
+            options: [
+              { value: 'true', label: 'Yes' },
+              { value: 'false', label: 'No' },
+            ],
+          },
+        ]}
+        onFilterChange={setFilterCriteria}
+        searchPlaceholder="Search by name, email, or phone..."
+      />
+
       {/* Status Stats Cards */}
       <div className="grid gap-4 md:grid-cols-4 animate-fade-up" style={{ animationDelay: '100ms' }}>
         {[
@@ -264,24 +446,94 @@ export default function AdminVerifications() {
         <CardHeader className="border-b border-border/50 bg-gradient-to-r from-card to-card/50">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xl font-semibold">All Verification Requests</CardTitle>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={fetchVerifications}
-              className="hover:bg-accent hover:scale-105 transition-all duration-200"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
+            <div className="flex items-center gap-2">
+              <ExportButton
+                data={filteredVerifications}
+                columns={[
+                  { key: 'landlord.full_name', label: 'Landlord Name' },
+                  { key: 'landlord.email', label: 'Primary Email' },
+                  { key: 'verification_email', label: 'Verification Email' },
+                  { key: 'verification_phone', label: 'Phone Number' },
+                  { key: 'status', label: 'Status' },
+                  { key: 'trust_score', label: 'Trust Score' },
+                  { 
+                    key: 'email_verified', 
+                    label: 'Email Verified',
+                    format: formatBooleanForExport 
+                  },
+                  { 
+                    key: 'phone_verified', 
+                    label: 'Phone Verified',
+                    format: formatBooleanForExport 
+                  },
+                  { 
+                    key: 'identity_verified', 
+                    label: 'Identity Verified',
+                    format: formatBooleanForExport 
+                  },
+                  { 
+                    key: 'submitted_at', 
+                    label: 'Submitted At',
+                    format: formatDateForExport 
+                  },
+                  { key: 'id_document_url', label: 'ID Document URL' },
+                  { key: 'proof_of_ownership_url', label: 'Proof of Ownership URL' },
+                ]}
+                filename="verifications"
+                pageType="verifications"
+                filterCriteria={filterCriteria}
+                size="sm"
+              />
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={fetchVerifications}
+                className="hover:bg-accent hover:scale-105 transition-all duration-200"
+              >
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+            </div>
           </div>
         </CardHeader>
         
         <CardContent className="p-6">
+          {/* Bulk Actions Bar */}
+          <BulkActionsBar
+            selectedCount={selectedIds.size}
+            totalCount={filteredVerifications.length}
+            actions={[
+              { 
+                value: 'approve', 
+                label: 'Approve Selected', 
+                variant: 'default',
+                requiresNote: false 
+              },
+              { 
+                value: 'reject', 
+                label: 'Reject Selected', 
+                variant: 'destructive',
+                requiresNote: true,
+                noteLabel: 'Rejection Reason',
+                notePlaceholder: 'Provide a detailed reason for rejection...'
+              },
+            ]}
+            onAction={handleBulkAction}
+            onClearSelection={clearSelection}
+            entityName="verification"
+          />
+
           {/* Table */}
           <div className="rounded-xl border border-border/50 overflow-hidden bg-card/50 backdrop-blur-sm">
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50 hover:bg-muted/50 border-b border-border/50">
+                  <TableHead className="w-12">
+                    <Checkbox
+                      checked={selectedIds.size === verifications.length && verifications.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                  </TableHead>
                   <TableHead className="font-semibold">Landlord</TableHead>
                   <TableHead className="font-semibold">Contact Info</TableHead>
                   <TableHead className="font-semibold">Documents</TableHead>
@@ -292,9 +544,9 @@ export default function AdminVerifications() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {verifications.length === 0 ? (
+                {filteredVerifications.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-12">
+                    <TableCell colSpan={8} className="text-center py-12">
                       <div className="flex flex-col items-center gap-3">
                         <div className="p-4 rounded-full bg-muted/50">
                           <ShieldCheck className="h-8 w-8 text-muted-foreground" />
@@ -302,19 +554,27 @@ export default function AdminVerifications() {
                         <div>
                           <p className="font-medium text-lg">No verifications found</p>
                           <p className="text-sm text-muted-foreground mt-1">
-                            All verification requests will appear here
+                            {Object.keys(filterCriteria).length > 0 
+                              ? 'Try adjusting your filters'
+                              : 'All verification requests will appear here'}
                           </p>
                         </div>
                       </div>
                     </TableCell>
                   </TableRow>
                 ) : (
-                  verifications.map((verification, index) => (
+                  filteredVerifications.map((verification, index) => (
                     <TableRow 
                       key={verification.id} 
                       className="group hover:bg-accent/50 transition-all duration-200 border-b border-border/30 animate-fade-in"
                       style={{ animationDelay: `${index * 30}ms` }}
                     >
+                      <TableCell>
+                        <Checkbox
+                          checked={selectedIds.has(verification.id)}
+                          onCheckedChange={() => toggleSelection(verification.id)}
+                        />
+                      </TableCell>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-3">
                           <div className="h-10 w-10 rounded-full bg-gradient-to-br from-warning/20 to-warning/10 flex items-center justify-center text-sm font-semibold">
@@ -451,7 +711,10 @@ export default function AdminVerifications() {
           {verifications.length > 0 && (
             <div className="mt-4 flex items-center justify-between text-sm text-muted-foreground">
               <p>
-                Showing <span className="font-medium text-foreground">{verifications.length}</span> verification requests
+                Showing <span className="font-medium text-foreground">{filteredVerifications.length}</span> 
+                {filteredVerifications.length !== verifications.length && (
+                  <> of <span className="font-medium text-foreground">{verifications.length}</span></>
+                )} verification requests
               </p>
               <p className="flex items-center gap-2">
                 <span className="h-2 w-2 rounded-full bg-success animate-pulse"></span>

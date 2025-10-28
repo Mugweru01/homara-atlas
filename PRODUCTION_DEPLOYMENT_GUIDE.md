@@ -682,3 +682,9 @@ Your Homara Gatekeeper admin panel is now ready for production deployment with:
 - Consult Supabase documentation: https://supabase.com/docs
 - Contact: wachiraedwin02@gmail.com
 
+
+
+
+
+
+

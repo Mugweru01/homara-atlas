@@ -3,6 +3,7 @@ import { useAdmin } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { NotificationCenter } from '@/components/admin/NotificationCenter';
 import {
   Sheet,
   SheetContent,
@@ -18,9 +19,18 @@ import {
   Settings,
   LogOut,
   Menu,
-  Bell,
   Search,
   X,
+  Database,
+  Activity,
+  Shield,
+  FileBarChart,
+  BarChart3,
+  FileSpreadsheet,
+  Sliders,
+  ListTodo,
+  ShieldAlert,
+  BookOpen,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -33,12 +43,23 @@ import {
 
 const navigation = [
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard, roles: ['all'] },
+  { name: 'My Tasks', href: '/admin/my-tasks', icon: ListTodo, roles: ['all'], badge: 0 },
+  { name: 'Customize Dashboard', href: '/admin/dashboard-settings', icon: Sliders, roles: ['all'] },
   { name: 'Users', href: '/admin/users', icon: Users, roles: ['all'] },
   { name: 'Listings', href: '/admin/listings', icon: Home, roles: ['all'] },
   { name: 'Verifications', href: '/admin/verifications', icon: ShieldCheck, roles: ['all'], badge: 0 },
+  { name: 'Analytics', href: '/admin/analytics', icon: BarChart3, roles: ['all'] },
+  { name: 'Report Builder', href: '/admin/report-builder', icon: FileSpreadsheet, roles: ['all'] },
+  { name: 'Reports', href: '/admin/reports', icon: FileBarChart, roles: ['all'] },
+  { name: 'Monitoring', href: '/admin/monitoring', icon: Activity, roles: ['super_admin', 'senior_admin'] },
+  { name: 'Performance', href: '/admin/performance', icon: Activity, roles: ['super_admin', 'senior_admin'] },
+  { name: 'Security', href: '/admin/security', icon: Shield, roles: ['all'] },
+  { name: 'Security Center', href: '/admin/security-center', icon: ShieldAlert, roles: ['super_admin', 'senior_admin'] },
   { name: 'Admins', href: '/admin/admins', icon: UserCog, roles: ['super_admin'] },
+  { name: 'Backups', href: '/admin/backups', icon: Database, roles: ['super_admin'] },
   { name: 'Audit Logs', href: '/admin/audit-logs', icon: ClipboardList, roles: ['super_admin', 'senior_admin'] },
   { name: 'Settings', href: '/admin/settings', icon: Settings, roles: ['super_admin'] },
+  { name: 'Knowledge Base', href: '/admin/knowledge-base', icon: BookOpen, roles: ['all'] },
 ];
 
 export function AdminLayout() {
@@ -95,13 +116,13 @@ export function AdminLayout() {
   const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
     <>
       {/* Logo Section */}
-      <div className="flex h-16 items-center gap-3 border-b border-border/50 px-4 bg-gradient-to-r from-primary/5 to-transparent">
+        <div className="flex h-16 items-center gap-3 border-b border-border/50 px-4 bg-gradient-to-r from-primary/5 to-transparent">
         <div className="relative">
           <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-primary to-primary-glow opacity-20 blur"></div>
           <img 
-            src="/placeholder.svg" 
+            src="https://zsgyqhsajyiiluiutopg.supabase.co/storage/v1/object/public/logo/logo.png" 
             alt="Homara Logo" 
-            className="relative h-8 w-8 rounded-lg"
+            className="relative h-8 w-8 rounded-lg object-contain"
           />
         </div>
         {(mobile || sidebarOpen) && (
@@ -306,23 +327,7 @@ export function AdminLayout() {
             </TooltipProvider>
 
             {/* Notifications */}
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button 
-                    variant="ghost" 
-                    size="icon"
-                    className="relative hover:bg-accent transition-all duration-200 hover:scale-110"
-                  >
-                    <Bell className="h-5 w-5" />
-                    <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-warning animate-pulse"></span>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>
-                  Notifications
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <NotificationCenter />
 
             {/* Theme Toggle */}
             <ThemeToggle />

@@ -1,109 +1,188 @@
 /**
  * Export Utilities
- * 
- * Functions for exporting data to CSV and PDF formats
+ * Functions to export data to various formats (CSV, JSON, Excel)
  */
 
-import { toast } from 'sonner';
+export interface ExportColumn {
+  key: string;
+  label: string;
+  format?: (value: any) => string;
+}
 
 /**
- * Export data to CSV format
+ * Convert data to CSV format
  */
-export function exportToCSV<T extends Record<string, unknown>>(
-  data: T[],
-  filename: string,
-  columns?: { key: keyof T; label: string }[]
-): void {
-  try {
-    if (data.length === 0) {
-      toast.error('No data to export');
-      return;
-    }
+export function convertToCSV(
+  data: any[],
+  columns: ExportColumn[]
+): string {
+  if (!data || data.length === 0) {
+    return '';
+  }
 
-    // Determine columns
-    const exportColumns = columns || Object.keys(data[0]).map(key => ({ key, label: key }));
+  // Create header row
+  const headers = columns.map(col => escapeCSVValue(col.label));
+  const headerRow = headers.join(',');
 
-    // Create CSV header
-    const headers = exportColumns.map(col => col.label).join(',');
-
-    // Create CSV rows
-    const rows = data.map(row => {
-      return exportColumns
-        .map(col => {
-          const value = row[col.key];
-          // Handle complex values
-          if (value === null || value === undefined) return '';
-          if (typeof value === 'object') return JSON.stringify(value).replace(/,/g, ';');
-          // Escape commas and quotes
-          const stringValue = String(value);
-          if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
-            return `"${stringValue.replace(/"/g, '""')}"`;
-          }
-          return stringValue;
-        })
-        .join(',');
+  // Create data rows
+  const dataRows = data.map(item => {
+    const values = columns.map(col => {
+      let value = getNestedValue(item, col.key);
+      
+      // Apply custom formatter if provided
+      if (col.format && value !== null && value !== undefined) {
+        value = col.format(value);
+      }
+      
+      return escapeCSVValue(value);
     });
+    return values.join(',');
+  });
 
-    // Combine header and rows
-    const csv = [headers, ...rows].join('\n');
+  return [headerRow, ...dataRows].join('\n');
+}
 
-    // Create blob and download
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${filename}-${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    window.URL.revokeObjectURL(url);
-
-    toast.success('Data exported successfully');
-  } catch (error) {
-    console.error('Export to CSV failed', error);
-    toast.error('Failed to export data');
+/**
+ * Escape CSV values (handle quotes, commas, newlines)
+ */
+function escapeCSVValue(value: any): string {
+  if (value === null || value === undefined) {
+    return '';
   }
-}
 
-/**
- * Export data to JSON format
- */
-export function exportToJSON<T>(data: T[], filename: string): void {
-  try {
-    if (data.length === 0) {
-      toast.error('No data to export');
-      return;
-    }
-
-    const json = JSON.stringify(data, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${filename}-${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-    window.URL.revokeObjectURL(url);
-
-    toast.success('Data exported successfully');
-  } catch (error) {
-    console.error('Export to JSON failed', error);
-    toast.error('Failed to export data');
+  const stringValue = String(value);
+  
+  // If value contains comma, quote, or newline, wrap in quotes and escape quotes
+  if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+    return '"' + stringValue.replace(/"/g, '""') + '"';
   }
+  
+  return stringValue;
 }
 
 /**
- * Format date for export
+ * Get nested object value using dot notation (e.g., 'user.profile.name')
  */
-export function formatDateForExport(date: string | Date): string {
-  const d = new Date(date);
-  return d.toLocaleString();
+function getNestedValue(obj: any, path: string): any {
+  return path.split('.').reduce((current, key) => current?.[key], obj);
 }
 
 /**
- * Sanitize filename
+ * Download data as CSV file
  */
-export function sanitizeFilename(filename: string): string {
-  return filename
-    .replace(/[^a-z0-9]/gi, '_')
-    .toLowerCase()
-    .substring(0, 50);
+export function downloadCSV(
+  data: any[],
+  columns: ExportColumn[],
+  filename: string
+): void {
+  const csv = convertToCSV(data, columns);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  downloadBlob(blob, filename.endsWith('.csv') ? filename : `${filename}.csv`);
 }
 
+/**
+ * Download data as JSON file
+ */
+export function downloadJSON(
+  data: any[],
+  filename: string
+): void {
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+  downloadBlob(blob, filename.endsWith('.json') ? filename : `${filename}.json`);
+}
+
+/**
+ * Download blob as file
+ */
+function downloadBlob(blob: Blob, filename: string): void {
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  
+  link.setAttribute('href', url);
+  link.setAttribute('download', filename);
+  link.style.visibility = 'hidden';
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  // Clean up
+  URL.revokeObjectURL(url);
+}
+
+/**
+ * Format date for CSV export
+ */
+export function formatDateForExport(date: string | Date | null | undefined): string {
+  if (!date) return '';
+  
+  const d = typeof date === 'string' ? new Date(date) : date;
+  
+  if (isNaN(d.getTime())) return '';
+  
+  return d.toLocaleString('en-US', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}
+
+/**
+ * Format boolean for CSV export
+ */
+export function formatBooleanForExport(value: boolean | null | undefined): string {
+  if (value === null || value === undefined) return '';
+  return value ? 'Yes' : 'No';
+}
+
+/**
+ * Format array for CSV export
+ */
+export function formatArrayForExport(arr: any[] | null | undefined): string {
+  if (!arr || arr.length === 0) return '';
+  return arr.join('; ');
+}
+
+/**
+ * Get file size in human-readable format
+ */
+export function getFileSizeString(bytes: number): string {
+  if (bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+}
+
+/**
+ * Generate filename with timestamp
+ */
+export function generateExportFilename(
+  prefix: string,
+  extension: 'csv' | 'json' = 'csv'
+): string {
+  const timestamp = new Date()
+    .toISOString()
+    .replace(/[:.]/g, '-')
+    .replace('T', '_')
+    .slice(0, -5); // Remove milliseconds and Z
+  
+  return `${prefix}_${timestamp}.${extension}`;
+}
+
+/**
+ * Calculate estimated file size
+ */
+export function estimateFileSize(data: any[], columns: ExportColumn[]): number {
+  if (!data || data.length === 0) return 0;
+  
+  // Rough estimate: average 50 bytes per cell
+  const estimatedBytes = data.length * columns.length * 50;
+  return estimatedBytes;
+}

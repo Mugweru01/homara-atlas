@@ -245,7 +245,7 @@ export default function AdminListings() {
         is_active: boolean;
         rejection_reason?: string;
       } = {
-        approval_status: status,
+          approval_status: status,
         is_active: status === 'approved',
       };
 
@@ -365,7 +365,7 @@ export default function AdminListings() {
       [
         'Title',
         'Location',
-        'Price (KES)',
+        'Price (Ksh)',
         'Status',
         'Bedrooms',
         'Bathrooms',
@@ -717,7 +717,7 @@ export default function AdminListings() {
                       <TableCell className="font-medium">
                         <div className="max-w-[200px]">
                           <div className="font-medium group-hover:text-primary transition-colors line-clamp-2">
-                            {property.title}
+                        {property.title}
                           </div>
                           <div className="text-xs text-muted-foreground flex items-center gap-1 mt-1">
                             <User className="h-3 w-3" />
@@ -734,7 +734,7 @@ export default function AdminListings() {
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-1">
                           <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
-                          <span>KES {property.price_kes?.toLocaleString() || 'N/A'}</span>
+                          <span>Ksh {property.price_kes?.toLocaleString() || 'N/A'}</span>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -814,8 +814,8 @@ export default function AdminListings() {
                                 <CheckCircle className="h-4 w-4 mr-2" />
                                 Approve
                               </DropdownMenuItem>
-                            )}
-                            {property.approval_status !== 'declined' && (
+                          )}
+                          {property.approval_status !== 'declined' && (
                               <DropdownMenuItem
                                 onClick={() => openRejectDialog(property)}
                                 className="text-destructive"
@@ -923,7 +923,7 @@ export default function AdminListings() {
                     <div>
                       <p className="text-xs text-muted-foreground mb-1">Price</p>
                       <p className="font-medium">
-                        KES {selectedProperty.price_kes?.toLocaleString()}
+                        Ksh {selectedProperty.price_kes?.toLocaleString()}
                       </p>
                     </div>
                     <div>
