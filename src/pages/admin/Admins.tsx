@@ -40,7 +40,9 @@ import {
   Crown,
   CheckCircle2,
   Clock,
-  XCircle
+  XCircle,
+  Copy,
+  Check
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { logger } from '@/lib/production-logger';
@@ -49,8 +51,8 @@ import { useAdmin } from '@/hooks/useAdmin';
 interface Admin {
   id: string;
   email: string;
-  admin_role: string;
-  status: string;
+  admin_role: 'super_admin' | 'senior_admin' | 'junior_admin' | 'support_admin';
+  status: 'active' | 'suspended' | 'pending_approval' | 'deactivated';
   created_at: string;
 }
 
@@ -60,10 +62,14 @@ export default function AdminsManagement() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isCodeDialogOpen, setIsCodeDialogOpen] = useState(false);
+  const [createdAdminCode, setCreatedAdminCode] = useState<string | null>(null);
+  const [createdAdminEmail, setCreatedAdminEmail] = useState<string | null>(null);
+  const [codeCopied, setCodeCopied] = useState(false);
   const [newAdmin, setNewAdmin] = useState({
     email: '',
-    adminRole: 'junior_admin',
-    adminCode: '',
+    adminRole: 'junior_admin' as 'super_admin' | 'senior_admin' | 'junior_admin' | 'support_admin',
+    fullName: '',
   });
 
   useEffect(() => {
@@ -94,22 +100,78 @@ export default function AdminsManagement() {
 
   const createAdmin = async () => {
     try {
-      // TODO: Implement admin creation via Edge Function
-      // This should:
-      // 1. Validate email and code
-      // 2. Create user account
-      // 3. Add admin record
-      // 4. Send welcome email
+      // Validate inputs
+      if (!newAdmin.email || !newAdmin.adminRole) {
+        toast.error('Email and admin role are required');
+        return;
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(newAdmin.email)) {
+        toast.error('Please enter a valid email address');
+        return;
+      }
+
+      // Call database function to create admin
+      const { data, error } = await supabase.rpc('create_admin', {
+        p_email: newAdmin.email,
+        p_admin_role: newAdmin.adminRole,
+        p_created_by: null, // Will be determined by function from auth.uid()
+      });
+
+      if (error) {
+        console.error('Database function error:', error);
+        throw new Error(error.message || 'Failed to create admin');
+      }
+
+      if (!data || !data.success) {
+        throw new Error(data?.message || 'Failed to create admin');
+      }
+
+      // Store the admin code to show in dialog
+      setCreatedAdminCode(data.admin_code);
+      setCreatedAdminEmail(newAdmin.email);
       
-      toast.info('Admin creation functionality coming soon');
+      // Reset form
+      setNewAdmin({
+        email: '',
+        adminRole: 'junior_admin',
+        fullName: '',
+      });
+      
+      // Close create dialog and open code display dialog
       setIsCreateDialogOpen(false);
-    } catch (error) {
+      setIsCodeDialogOpen(true);
+      
+      // Refresh admin list
+      fetchAdmins();
+    } catch (error: any) {
       logger.error('Error creating admin', { error });
-      toast.error('Failed to create admin');
+      
+      // Provide helpful error messages
+      let errorMessage = 'Failed to create admin';
+      
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.error) {
+        errorMessage = error.error;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      
+      // Check for specific error cases
+      if (errorMessage.includes('Only super admins')) {
+        errorMessage = 'Only super admins can create other admins.';
+      } else if (errorMessage.includes('already exists')) {
+        errorMessage = 'An admin with this email already exists.';
+      }
+      
+      toast.error(errorMessage);
     }
   };
 
-  const updateAdminStatus = async (adminId: string, newStatus: string) => {
+  const updateAdminStatus = async (adminId: string, newStatus: 'active' | 'suspended' | 'pending_approval' | 'deactivated') => {
     try {
       const { error } = await supabase
         .from('admins')
@@ -301,7 +363,7 @@ export default function AdminsManagement() {
                       <Label htmlFor="role" className="text-sm font-medium">Admin Role</Label>
                       <Select
                         value={newAdmin.adminRole}
-                        onValueChange={(value) => setNewAdmin({...newAdmin, adminRole: value})}
+                        onValueChange={(value: 'super_admin' | 'senior_admin' | 'junior_admin' | 'support_admin') => setNewAdmin({...newAdmin, adminRole: value})}
                       >
                         <SelectTrigger className="h-11">
                           <SelectValue />
@@ -325,21 +387,27 @@ export default function AdminsManagement() {
                               <span>Super Admin</span>
                             </div>
                           </SelectItem>
+                          <SelectItem value="support_admin">
+                            <div className="flex items-center gap-2">
+                              <Shield className="h-4 w-4" />
+                              <span>Support Admin</span>
+                            </div>
+                          </SelectItem>
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">Determines access level and permissions</p>
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="code" className="text-sm font-medium">Admin Code</Label>
+                      <Label htmlFor="fullName" className="text-sm font-medium">Full Name (Optional)</Label>
                       <Input
-                        id="code"
-                        type="password"
-                        placeholder="Enter secure admin code"
-                        value={newAdmin.adminCode}
-                        onChange={(e) => setNewAdmin({...newAdmin, adminCode: e.target.value})}
+                        id="fullName"
+                        type="text"
+                        placeholder="John Doe"
+                        value={newAdmin.fullName || ''}
+                        onChange={(e) => setNewAdmin({...newAdmin, fullName: e.target.value})}
                         className="h-11"
                       />
-                      <p className="text-xs text-muted-foreground">Required for security verification</p>
+                      <p className="text-xs text-muted-foreground">Display name for the admin</p>
                     </div>
                   </div>
                   <DialogFooter className="gap-2">
@@ -356,6 +424,80 @@ export default function AdminsManagement() {
                     >
                       <UserPlus className="h-4 w-4 mr-2" />
                       Create Admin
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Admin Code Display Dialog */}
+              <Dialog open={isCodeDialogOpen} onOpenChange={setIsCodeDialogOpen}>
+                <DialogContent className="sm:max-w-[500px] animate-scale-in">
+                  <DialogHeader>
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 rounded-lg bg-success/10">
+                        <CheckCircle2 className="h-5 w-5 text-success" />
+                      </div>
+                      <div>
+                        <DialogTitle className="text-xl">Admin Created Successfully</DialogTitle>
+                        <DialogDescription>
+                          Share this admin code with {createdAdminEmail} manually
+                        </DialogDescription>
+                      </div>
+                    </div>
+                  </DialogHeader>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium">Admin Code</Label>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 px-4 py-3 bg-muted rounded-lg font-mono text-lg font-bold tracking-wider text-center">
+                          {createdAdminCode}
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={async () => {
+                            if (createdAdminCode) {
+                              try {
+                                await navigator.clipboard.writeText(createdAdminCode);
+                                setCodeCopied(true);
+                                toast.success('Admin code copied to clipboard');
+                                setTimeout(() => setCodeCopied(false), 2000);
+                              } catch (err) {
+                                toast.error('Failed to copy code');
+                              }
+                            }
+                          }}
+                          className="h-11 w-11"
+                        >
+                          {codeCopied ? (
+                            <Check className="h-4 w-4 text-success" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        ⚠️ This code will only be shown once. Make sure to share it securely with the new admin.
+                      </p>
+                    </div>
+                    <div className="p-4 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                      <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                        <strong>Important:</strong> The new admin should use this code along with their email to log in. 
+                        Do not send this code via email. Share it through a secure channel (in-person, secure messaging, etc.).
+                      </p>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button 
+                      onClick={() => {
+                        setIsCodeDialogOpen(false);
+                        setCreatedAdminCode(null);
+                        setCreatedAdminEmail(null);
+                        setCodeCopied(false);
+                      }}
+                      className="w-full"
+                    >
+                      I've Saved the Code
                     </Button>
                   </DialogFooter>
                 </DialogContent>
@@ -453,10 +595,15 @@ export default function AdminsManagement() {
                               <CheckCircle2 className="h-3 w-3 mr-1" />
                               Active
                             </Badge>
-                          ) : admin.status === 'inactive' ? (
+                          ) : admin.status === 'pending_approval' ? (
+                            <Badge variant="outline" className="border-yellow-500/30 text-yellow-600 hover:bg-yellow-500/10 transition-colors font-medium">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Pending
+                            </Badge>
+                          ) : admin.status === 'deactivated' ? (
                             <Badge variant="outline" className="border-muted-foreground/30 text-muted-foreground hover:bg-muted/50 transition-colors font-medium">
                               <Clock className="h-3 w-3 mr-1" />
-                              Inactive
+                              Deactivated
                             </Badge>
                           ) : (
                             <Badge variant="outline" className="border-destructive text-destructive hover:bg-destructive/10 transition-colors font-medium">
@@ -475,7 +622,7 @@ export default function AdminsManagement() {
                         <TableCell className="text-right">
                           <Select
                             value={admin.status}
-                            onValueChange={(value) => updateAdminStatus(admin.id, value)}
+                            onValueChange={(value: 'active' | 'suspended' | 'pending_approval' | 'deactivated') => updateAdminStatus(admin.id, value)}
                           >
                             <SelectTrigger className="w-[130px] ml-auto h-9">
                               <SelectValue />
@@ -487,10 +634,16 @@ export default function AdminsManagement() {
                                   <span>Active</span>
                                 </div>
                               </SelectItem>
-                              <SelectItem value="inactive">
+                              <SelectItem value="pending_approval">
+                                <div className="flex items-center gap-2">
+                                  <Clock className="h-3.5 w-3.5 text-yellow-600" />
+                                  <span>Pending Approval</span>
+                                </div>
+                              </SelectItem>
+                              <SelectItem value="deactivated">
                                 <div className="flex items-center gap-2">
                                   <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                                  <span>Inactive</span>
+                                  <span>Deactivated</span>
                                 </div>
                               </SelectItem>
                               <SelectItem value="suspended">

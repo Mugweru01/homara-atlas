@@ -8,12 +8,28 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    watch: {
+      // Exclude other projects from being watched
+      ignored: [
+        '**/kenya-landlord-link/**',
+        '**/node_modules/**',
+        '**/.git/**',
+        '**/../kenya-landlord-link/**',
+      ],
+    },
+    fs: {
+      // Restrict file system access to project root only
+      strict: true,
+      allow: [__dirname],
+    },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    // Prevent resolving imports from other projects
+    dedupe: ['react', 'react-dom'],
   },
   build: {
     // Ensure proper cache busting
@@ -71,7 +87,15 @@ export default defineConfig(({ mode }) => ({
       "@radix-ui/react-select",
       "@radix-ui/react-dropdown-menu",
       "@radix-ui/react-tooltip",
+      "@upstash/redis",
     ],
     force: true,
+  },
+  // Define global variables for browser compatibility
+  define: {
+    // Polyfill process for packages that expect it (like @upstash/redis)
+    'process.env.NODE_ENV': JSON.stringify(mode),
+    'process.env': '{}',
+    'global': 'globalThis',
   },
 }));

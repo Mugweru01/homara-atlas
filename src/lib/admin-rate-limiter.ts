@@ -55,20 +55,51 @@ export async function checkRateLimit(
   type: RateLimitType = 'admin_api'
 ): Promise<RateLimitResult> {
   try {
+    // Check if Redis is available (browser environment check)
+    const url = import.meta.env.VITE_UPSTASH_REDIS_REST_URL;
+    const token = import.meta.env.VITE_UPSTASH_REDIS_REST_TOKEN;
+    
+    if (!url || !token) {
+      // Redis not configured - allow request (fail open)
+      logger.warn('Redis not configured, skipping rate limit', { identifier, type });
+      return {
+        allowed: true,
+        remaining: -1,
+        resetAt: Date.now() + 60000,
+      };
+    }
+
     const config = RATE_LIMITS[type];
     const key = `rate_limit:admin:${type}:${identifier}`;
     
-    // Get current count
-    const currentStr = await redisHelpers.get(key);
-    const current = currentStr ? parseInt(currentStr, 10) : 0;
+    // Try to get current count, but fail gracefully if Redis is unavailable
+    let current = 0;
+    try {
+      const currentStr = await redisHelpers.get(key);
+      current = currentStr ? parseInt(String(currentStr), 10) : 0;
+    } catch (redisError) {
+      // Redis connection failed - allow request (fail open)
+      logger.warn('Redis connection failed, skipping rate limit', { error: redisError, identifier, type });
+      return {
+        allowed: true,
+        remaining: -1,
+        resetAt: Date.now() + 60000,
+      };
+    }
     
     const now = Date.now();
     const resetAt = now + (config.windowSeconds * 1000);
     
     // Check if limit exceeded
     if (current >= config.maxAttempts) {
-      const ttl = await redisHelpers.ttl(key);
-      const retryAfter = ttl > 0 ? ttl : config.windowSeconds;
+      let retryAfter = config.windowSeconds;
+      try {
+        const ttl = await redisHelpers.ttl(key);
+        retryAfter = ttl > 0 ? ttl : config.windowSeconds;
+      } catch (ttlError) {
+        // If TTL check fails, use default window
+        logger.warn('Failed to get TTL, using default', { error: ttlError });
+      }
       
       logger.warn('Rate limit exceeded', {
         identifier,
@@ -87,11 +118,22 @@ export async function checkRateLimit(
     }
     
     // Increment counter
-    const newCount = await redisHelpers.incr(key);
-    
-    // Set expiry on first increment
-    if (newCount === 1) {
-      await redisHelpers.expire(key, config.windowSeconds);
+    let newCount = 1;
+    try {
+      newCount = await redisHelpers.incr(key);
+      
+      // Set expiry on first increment
+      if (newCount === 1) {
+        await redisHelpers.expire(key, config.windowSeconds);
+      }
+    } catch (incrError) {
+      // If increment fails, allow the request (fail open)
+      logger.warn('Failed to increment rate limit counter', { error: incrError });
+      return {
+        allowed: true,
+        remaining: -1,
+        resetAt: Date.now() + 60000,
+      };
     }
     
     return {
@@ -116,9 +158,19 @@ export async function checkRateLimit(
 export async function recordFailedLogin(email: string): Promise<void> {
   const key = `failed_logins:${email}`;
   try {
+    // Check if Redis is available
+    const url = import.meta.env.VITE_UPSTASH_REDIS_REST_URL;
+    const token = import.meta.env.VITE_UPSTASH_REDIS_REST_TOKEN;
+    
+    if (!url || !token) {
+      // Redis not configured - skip recording (fail silently)
+      return;
+    }
+
     await redisHelpers.incr(key);
     await redisHelpers.expire(key, 3600); // 1 hour
   } catch (error) {
+    // Fail silently - don't block login if Redis fails
     logger.error('Failed to record login attempt', { error, email });
   }
 }
@@ -129,8 +181,16 @@ export async function recordFailedLogin(email: string): Promise<void> {
 export async function getFailedLoginCount(email: string): Promise<number> {
   const key = `failed_logins:${email}`;
   try {
+    // Check if Redis is available
+    const url = import.meta.env.VITE_UPSTASH_REDIS_REST_URL;
+    const token = import.meta.env.VITE_UPSTASH_REDIS_REST_TOKEN;
+    
+    if (!url || !token) {
+      return 0;
+    }
+
     const countStr = await redisHelpers.get(key);
-    return countStr ? parseInt(countStr, 10) : 0;
+    return countStr ? parseInt(String(countStr), 10) : 0;
   } catch (error) {
     logger.error('Failed to get login count', { error, email });
     return 0;
@@ -143,8 +203,18 @@ export async function getFailedLoginCount(email: string): Promise<number> {
 export async function clearFailedLogins(email: string): Promise<void> {
   const key = `failed_logins:${email}`;
   try {
+    // Check if Redis is available
+    const url = import.meta.env.VITE_UPSTASH_REDIS_REST_URL;
+    const token = import.meta.env.VITE_UPSTASH_REDIS_REST_TOKEN;
+    
+    if (!url || !token) {
+      // Redis not configured - skip clearing (fail silently)
+      return;
+    }
+
     await redisHelpers.del(key);
   } catch (error) {
+    // Fail silently - don't block login if Redis fails
     logger.error('Failed to clear login attempts', { error, email });
   }
 }

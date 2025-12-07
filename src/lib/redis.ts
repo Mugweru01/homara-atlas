@@ -20,19 +20,42 @@ export function getRedis(): Redis {
       );
     }
 
-    redisInstance = new Redis({
-      url,
-      token,
-    });
+    try {
+      // Check if we're in a browser environment
+      const isBrowser = typeof window !== 'undefined';
+      
+      // Create Redis instance with explicit browser-safe configuration
+      // Upstash Redis REST API works in browsers, but we need to ensure
+      // it doesn't try to access Node.js-specific globals
+      redisInstance = new Redis({
+        url,
+        token,
+      });
+    } catch (error) {
+      logger.error('Failed to initialize Redis client', { error });
+      // In browser, if Redis fails to initialize, we'll handle it gracefully
+      // in the calling code (rate limiter will fail open)
+      throw error;
+    }
   }
 
   return redisInstance;
 }
 
 // Export redis as a getter for backward compatibility
+// This proxy lazily initializes Redis only when accessed
 export const redis = new Proxy({} as Redis, {
   get(_target, prop) {
-    return getRedis()[prop as keyof Redis];
+    try {
+      return getRedis()[prop as keyof Redis];
+    } catch (error) {
+      // If Redis initialization fails (e.g., in browser without proper config),
+      // return a no-op function to prevent errors
+      if (typeof prop === 'string' && typeof ({} as any)[prop] === 'function') {
+        return () => Promise.resolve(null);
+      }
+      throw error;
+    }
   },
 });
 

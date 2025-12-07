@@ -86,20 +86,64 @@ export function useAdmin() {
       }
 
       // Call edge function to verify admin code and create session
-      const { data, error } = await supabase.functions.invoke('admin-auth', {
-        body: { email, adminCode }
-      });
+      // Use direct fetch to get better error details
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+      let responseData: any;
+      let responseError: any;
+      
+      try {
+        const response = await fetch(`${supabaseUrl}/functions/v1/admin-auth`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({ email, adminCode })
+        });
 
-      if (error || !data?.success) {
+        const text = await response.text();
+        console.log('Edge Function response status:', response.status);
+        console.log('Edge Function response body:', text);
+
+        try {
+          responseData = JSON.parse(text);
+        } catch {
+          responseData = { raw: text };
+        }
+
+        if (!response.ok) {
+          responseError = {
+            status: response.status,
+            message: responseData?.error || `HTTP ${response.status}`,
+            details: responseData?.details
+          };
+        }
+      } catch (err: any) {
+        console.error('Edge Function fetch exception:', err);
+        responseError = err;
+      }
+
+      if (responseError) {
+        console.error('Edge Function error:', responseError);
         await recordFailedLogin(email);
-        await logAdminLogin(false, email, data?.error || 'Invalid credentials');
-        return { error: { message: data?.error || 'Invalid email or admin code' } };
+        const errorMsg = responseError.message || responseData?.error || 'Failed to connect to authentication service';
+        await logAdminLogin(false, email, errorMsg);
+        return { error: { message: errorMsg } };
+      }
+
+      if (!responseData?.success) {
+        await recordFailedLogin(email);
+        const errorMsg = responseData?.error || 'Invalid email or admin code';
+        console.error('Admin auth error:', responseData?.error, 'Details:', responseData?.details);
+        await logAdminLogin(false, email, errorMsg);
+        return { error: { message: errorMsg } };
       }
 
       // If we have a magic link, use it to sign in
-      if (data.session?.properties?.hashed_token) {
+      if (responseData.session?.properties?.hashed_token) {
         const { error: verifyError } = await supabase.auth.verifyOtp({
-          token_hash: data.session.properties.hashed_token,
+          token_hash: responseData.session.properties.hashed_token,
           type: 'magiclink'
         });
         
@@ -113,6 +157,42 @@ export function useAdmin() {
       // Clear failed login attempts on success
       await clearFailedLogins(email);
       await logAdminLogin(true, email);
+
+      // Wait a moment for auth state to update, then fetch admin info
+      // Also try fetching by email in case user_id isn't linked yet
+      setTimeout(async () => {
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        if (currentSession?.user) {
+          // First try by user_id
+          const { data: adminByUserId, error: userError } = await supabase
+            .from('admins')
+            .select('id, user_id, admin_role, status')
+            .eq('user_id', currentSession.user.id)
+            .eq('status', 'active')
+            .single();
+          
+          if (adminByUserId && !userError) {
+            setAdminInfo(adminByUserId);
+            setLoading(false);
+          } else {
+            // If not found by user_id, try by email (user_id might not be linked yet)
+            const { data: adminByEmail, error: emailError } = await supabase
+              .from('admins')
+              .select('id, user_id, admin_role, status')
+              .eq('email', email)
+              .eq('status', 'active')
+              .single();
+            
+            if (adminByEmail && !emailError) {
+              setAdminInfo(adminByEmail);
+              setLoading(false);
+            } else {
+              logger.warn('Admin not found after login', { userId: currentSession.user.id, email, userError, emailError });
+              setLoading(false);
+            }
+          }
+        }
+      }, 500);
 
       return { error: null };
     } catch (err) {

@@ -31,6 +31,20 @@ import {
   ListTodo,
   ShieldAlert,
   BookOpen,
+  Contact,
+  Tag,
+  Settings2,
+  Target,
+  Gavel,
+  CreditCard,
+  Calendar,
+  MessageSquare,
+  Image,
+  Star,
+  Wrench,
+  Scale,
+  FileText,
+  Ticket,
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -42,22 +56,39 @@ import {
 } from '@/components/ui/tooltip';
 
 const navigation = [
+  // All Admins
   { name: 'Dashboard', href: '/admin', icon: LayoutDashboard, roles: ['all'] },
   { name: 'My Tasks', href: '/admin/my-tasks', icon: ListTodo, roles: ['all'], badge: 0 },
-  { name: 'Customize Dashboard', href: '/admin/dashboard-settings', icon: Sliders, roles: ['all'] },
+  { name: 'HomaraDesk', href: '/homaradesk', icon: Ticket, roles: ['all'] },
   { name: 'Users', href: '/admin/users', icon: Users, roles: ['all'] },
-  { name: 'Listings', href: '/admin/listings', icon: Home, roles: ['all'] },
-  { name: 'Verifications', href: '/admin/verifications', icon: ShieldCheck, roles: ['all'], badge: 0 },
-  { name: 'Analytics', href: '/admin/analytics', icon: BarChart3, roles: ['all'] },
-  { name: 'Report Builder', href: '/admin/report-builder', icon: FileSpreadsheet, roles: ['all'] },
-  { name: 'Reports', href: '/admin/reports', icon: FileBarChart, roles: ['all'] },
-  { name: 'Monitoring', href: '/admin/monitoring', icon: Activity, roles: ['super_admin', 'senior_admin'] },
-  { name: 'Performance', href: '/admin/performance', icon: Activity, roles: ['super_admin', 'senior_admin'] },
-  { name: 'Security', href: '/admin/security', icon: Shield, roles: ['all'] },
-  { name: 'Security Center', href: '/admin/security-center', icon: ShieldAlert, roles: ['super_admin', 'senior_admin'] },
+  { name: 'Bookings', href: '/admin/bookings/short-stays', icon: Calendar, roles: ['all'] },
+  
+  // Senior Admin & Super Admin
+  { name: 'Team Performance', href: '/admin/team-performance', icon: Users, roles: ['senior_admin', 'super_admin'] },
+  { name: 'Agent Reports', href: '/admin/agent-reports', icon: FileBarChart, roles: ['senior_admin', 'super_admin'] },
+  { name: 'Ticket Analytics', href: '/admin/ticket-analytics', icon: BarChart3, roles: ['senior_admin', 'super_admin'] },
+  { name: 'Reports', href: '/admin/reports', icon: FileBarChart, roles: ['senior_admin', 'super_admin'] },
+  { name: 'Audit Logs', href: '/admin/audit-logs', icon: ClipboardList, roles: ['senior_admin', 'super_admin'] },
+  
+  // Super Admin Only
+  { name: 'Business Intelligence', href: '/admin/business-intelligence/financial', icon: Target, roles: ['super_admin'] },
+  { name: 'Analytics', href: '/admin/analytics', icon: BarChart3, roles: ['super_admin'] },
+  { name: 'CRM', href: '/crm', icon: Contact, roles: ['super_admin'] },
+  { name: 'Listings', href: '/admin/listings', icon: Home, roles: ['super_admin'] },
+  { name: 'Marketplace', href: '/admin/marketplace/auctions', icon: Gavel, roles: ['super_admin'] },
+  { name: 'Payments', href: '/admin/payments/transactions', icon: CreditCard, roles: ['super_admin'] },
+  { name: 'Moderation', href: '/admin/moderation/posts', icon: Shield, roles: ['super_admin'] },
+  { name: 'Reviews', href: '/admin/reviews', icon: Star, roles: ['super_admin'] },
+  { name: 'Maintenance', href: '/admin/maintenance/work-orders', icon: Wrench, roles: ['super_admin'] },
+  { name: 'Disputes', href: '/admin/disputes', icon: Scale, roles: ['super_admin'] },
+  { name: 'Content', href: '/admin/content/blog', icon: FileText, roles: ['super_admin'] },
+  { name: 'Verifications', href: '/admin/verifications', icon: ShieldCheck, roles: ['super_admin'], badge: 0 },
+  { name: 'Report Builder', href: '/admin/report-builder', icon: FileSpreadsheet, roles: ['super_admin'] },
+  { name: 'Monitoring', href: '/admin/monitoring', icon: Activity, roles: ['super_admin'] },
+  { name: 'Performance', href: '/admin/performance', icon: Activity, roles: ['super_admin'] },
+  { name: 'Security Center', href: '/admin/security-center', icon: ShieldAlert, roles: ['super_admin'] },
   { name: 'Admins', href: '/admin/admins', icon: UserCog, roles: ['super_admin'] },
   { name: 'Backups', href: '/admin/backups', icon: Database, roles: ['super_admin'] },
-  { name: 'Audit Logs', href: '/admin/audit-logs', icon: ClipboardList, roles: ['super_admin', 'senior_admin'] },
   { name: 'Settings', href: '/admin/settings', icon: Settings, roles: ['super_admin'] },
   { name: 'Knowledge Base', href: '/admin/knowledge-base', icon: BookOpen, roles: ['all'] },
 ];
@@ -107,6 +138,10 @@ export function AdminLayout() {
     if (roles.includes('all')) return true;
     if (roles.includes('super_admin') && isSuperAdmin) return true;
     if (roles.includes('senior_admin') && isSeniorAdmin) return true;
+    // Junior admins only see items marked as 'all'
+    if (adminInfo?.admin_role === 'junior_admin' || adminInfo?.admin_role === 'support_admin') {
+      return roles.includes('all');
+    }
     return false;
   };
 
