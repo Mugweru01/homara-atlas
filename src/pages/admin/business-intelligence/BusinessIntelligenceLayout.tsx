@@ -1,7 +1,6 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DollarSign, Target, Users } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 export function BusinessIntelligenceLayout() {
   const location = useLocation();
@@ -51,3 +50,4 @@ export function BusinessIntelligenceLayout() {
   );
 }
 
+export default BusinessIntelligenceLayout;

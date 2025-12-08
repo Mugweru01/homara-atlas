@@ -28,6 +28,7 @@ import { toast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ActivityFeed } from '@/components/admin/ActivityFeed';
 import { format, subDays, subMonths, startOfDay, endOfDay, eachDayOfInterval } from 'date-fns';
+import { useAdmin } from '@/hooks/useAdmin';
 import {
   LineChart,
   Line,
@@ -201,6 +202,7 @@ interface ChartData {
 }
 
 export default function AdminDashboard() {
+  const { isSuperAdmin, adminInfo } = useAdmin();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [growth, setGrowth] = useState<GrowthData>({});
   const [loading, setLoading] = useState(true);
@@ -250,7 +252,7 @@ export default function AdminDashboard() {
       subscriptions.forEach(sub => sub.unsubscribe());
       clearInterval(interval);
     };
-  }, [dateRange]);
+  }, [dateRange, isSuperAdmin]);
 
   const fetchStats = async () => {
     try {
@@ -259,6 +261,14 @@ export default function AdminDashboard() {
       if (dashboardError) throw dashboardError;
 
       const baseStats = dashboardData as unknown as DashboardStats;
+      
+      // For non-super admins, don't fetch sensitive data
+      if (!isSuperAdmin) {
+        baseStats.total_users = 0;
+        baseStats.total_revenue = 0;
+        baseStats.active_auctions = 0;
+        baseStats.queue_size = 0;
+      }
 
       // Fetch additional stats (with error handling for tables that might not exist)
       const [
@@ -284,22 +294,28 @@ export default function AdminDashboard() {
           .from('disputes')
           .select('id', { count: 'exact', head: true })
           .in('status', ['open', 'in_progress', 'under_review']),
-        // Active auctions
-        supabase
-          .from('marketplace_listings')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'active'),
-        // Bid queue size
-        supabase
-          .from('bid_queue')
-          .select('id', { count: 'exact', head: true })
-          .eq('status', 'pending'),
-        // Total revenue (from payments)
-        supabase
-          .from('payments')
-          .select('amount')
-          .eq('status', 'completed')
-          .gte('created_at', format(subDays(new Date(), 30), 'yyyy-MM-dd')),
+        // Active auctions (only for super admins)
+        isSuperAdmin
+          ? supabase
+              .from('marketplace_listings')
+              .select('id', { count: 'exact', head: true })
+              .eq('status', 'active')
+          : Promise.resolve({ data: null, count: 0, error: null }),
+        // Bid queue size (only for super admins)
+        isSuperAdmin
+          ? supabase
+              .from('bid_queue')
+              .select('id', { count: 'exact', head: true })
+              .eq('status', 'pending')
+          : Promise.resolve({ data: null, count: 0, error: null }),
+        // Total revenue (from payments) (only for super admins)
+        isSuperAdmin
+          ? supabase
+              .from('payments')
+              .select('amount')
+              .eq('status', 'completed')
+              .gte('created_at', format(subDays(new Date(), 30), 'yyyy-MM-dd'))
+          : Promise.resolve({ data: [], error: null }),
       ]);
 
       const bookingsCount = bookingsResult.status === 'fulfilled' ? (bookingsResult.value.count || 0) : 0;
@@ -445,8 +461,8 @@ export default function AdminDashboard() {
       const startDate = subDays(endDate, dateRange);
       const days = eachDayOfInterval({ start: startDate, end: endDate });
 
-      // Fetch user growth data
-      const userGrowthPromises = days.map(async (day) => {
+      // Fetch user growth data (only for super admins)
+      const userGrowthPromises = isSuperAdmin ? days.map(async (day) => {
         const dayStart = startOfDay(day);
         const dayEnd = endOfDay(day);
         const { count } = await supabase
@@ -457,16 +473,18 @@ export default function AdminDashboard() {
           date: format(day, 'MMM dd'),
           users: count || 0,
         };
-      });
+      }) : [];
 
-      const userGrowth = await Promise.all(userGrowthPromises);
+      const userGrowth = isSuperAdmin ? await Promise.all(userGrowthPromises) : [];
 
-      // Fetch revenue trends
-      const { data: payments } = await supabase
-        .from('payments')
-        .select('amount, created_at')
-        .eq('status', 'completed')
-        .gte('created_at', format(startDate, 'yyyy-MM-dd'));
+      // Fetch revenue trends (only for super admins)
+      const { data: payments } = isSuperAdmin
+        ? await supabase
+            .from('payments')
+            .select('amount, created_at')
+            .eq('status', 'completed')
+            .gte('created_at', format(startDate, 'yyyy-MM-dd'))
+        : { data: [] };
 
       const revenueByDay = days.map((day) => {
         const dayPayments = payments?.filter(p => {
@@ -563,6 +581,9 @@ export default function AdminDashboard() {
     return widget ? widget.visible !== false : true;
   };
 
+  // Sensitive cards that only super admins can see
+  const sensitiveCardIds = ['user_stats', 'total_revenue', 'active_auctions', 'queue_status', 'system_health'];
+  
   const statCards = [
     {
       id: 'user_stats',
@@ -666,7 +687,17 @@ export default function AdminDashboard() {
       subtitle: `${stats?.response_time || 0}ms avg response`,
       link: '/admin/performance',
     },
-  ].filter(card => isWidgetVisible(card.id));
+  ].filter(card => {
+    // Filter by widget visibility
+    if (!isWidgetVisible(card.id)) return false;
+    
+    // Filter sensitive cards - only show to super admins
+    if (sensitiveCardIds.includes(card.id) && !isSuperAdmin) {
+      return false;
+    }
+    
+    return true;
+  });
 
   return (
     <div className="space-y-8">
@@ -776,53 +807,57 @@ export default function AdminDashboard() {
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
-            {/* User Growth Chart */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>User Growth</CardTitle>
-                  <CardDescription>New user registrations over time</CardDescription>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => exportChart('user-growth')}>
-                  <Download className="h-4 w-4" />
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <AreaChart data={chartData.userGrowth}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip />
-                    <Area type="monotone" dataKey="users" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+            {/* User Growth Chart - Super Admin Only */}
+            {isSuperAdmin && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>User Growth</CardTitle>
+                    <CardDescription>New user registrations over time</CardDescription>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => exportChart('user-growth')}>
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <AreaChart data={chartData.userGrowth}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip />
+                      <Area type="monotone" dataKey="users" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.3} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
 
-            {/* Revenue Trends Chart */}
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Revenue Trends</CardTitle>
-                  <CardDescription>Daily revenue from completed payments</CardDescription>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => exportChart('revenue')}>
-                  <Download className="h-4 w-4" />
-                </Button>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={chartData.revenueTrends}>
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="date" />
-                    <YAxis />
-                    <Tooltip formatter={(value: number) => `KES ${value.toLocaleString()}`} />
-                    <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
+            {/* Revenue Trends Chart - Super Admin Only */}
+            {isSuperAdmin && (
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <div>
+                    <CardTitle>Revenue Trends</CardTitle>
+                    <CardDescription>Daily revenue from completed payments</CardDescription>
+                  </div>
+                  <Button variant="ghost" size="sm" onClick={() => exportChart('revenue')}>
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={chartData.revenueTrends}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip formatter={(value: number) => `KES ${value.toLocaleString()}`} />
+                      <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Property Types Distribution */}
             <Card>

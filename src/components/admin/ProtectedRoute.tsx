@@ -1,22 +1,21 @@
+import { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAdmin } from '@/hooks/useAdmin';
-import { usePermissions } from '@/hooks/usePermissions';
 
 interface ProtectedRouteProps {
-  children: React.ReactNode;
+  children: ReactNode;
   requiredRole?: 'super_admin' | 'senior_admin' | 'junior_admin' | 'support_admin';
   requireSeniorOrAbove?: boolean;
   requireSuperAdmin?: boolean;
 }
 
-export function ProtectedRoute({ 
-  children, 
+export function ProtectedRoute({
+  children,
   requiredRole,
   requireSeniorOrAbove,
-  requireSuperAdmin 
+  requireSuperAdmin
 }: ProtectedRouteProps) {
   const { isAdmin, isSuperAdmin, isSeniorAdmin, adminInfo, loading } = useAdmin();
-  const permissions = usePermissions();
 
   // Show loading while checking auth
   if (loading) {
@@ -58,4 +57,3 @@ export function ProtectedRoute({
 
   return <>{children}</>;
 }
-

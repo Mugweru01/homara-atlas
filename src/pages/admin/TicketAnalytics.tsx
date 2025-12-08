@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { 
-  BarChart3, 
+import {
+  BarChart3,
   Download,
   Calendar,
   TrendingUp,
   Clock,
-  CheckCircle2
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAdmin } from '@/hooks/useAdmin';
@@ -61,7 +62,7 @@ export default function TicketAnalytics() {
   const fetchAnalytics = async () => {
     try {
       setLoading(true);
-      
+
       // Calculate date range
       const now = new Date();
       let startDate: Date;
@@ -82,7 +83,7 @@ export default function TicketAnalytics() {
       if (error) throw error;
 
       const ticketsList = tickets || [];
-      
+
       // Calculate stats
       const total = ticketsList.length;
       const open = ticketsList.filter(t => t.status === 'open').length;
@@ -91,7 +92,7 @@ export default function TicketAnalytics() {
       const closed = ticketsList.filter(t => t.status === 'closed').length;
 
       // Calculate average resolution time
-      const resolvedTickets = ticketsList.filter(t => 
+      const resolvedTickets = ticketsList.filter(t =>
         (t.status === 'resolved' || t.status === 'closed') && t.resolved_at
       );
       let avgResolutionTime = 0;
@@ -182,7 +183,7 @@ export default function TicketAnalytics() {
       a.download = `ticket-analytics-${period}-${new Date().toISOString().split('T')[0]}.csv`;
       a.click();
       window.URL.revokeObjectURL(url);
-      
+
       toast.success('Report exported successfully');
     } catch (error) {
       toast.error('Failed to export report');
@@ -337,14 +338,14 @@ export default function TicketAnalytics() {
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={stats.byStatus}>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis 
-                    dataKey="status" 
+                  <XAxis
+                    dataKey="status"
                     stroke="#888888"
                     fontSize={12}
                     tickLine={false}
                     axisLine={false}
                   />
-                  <YAxis 
+                  <YAxis
                     stroke="#888888"
                     fontSize={12}
                     tickLine={false}

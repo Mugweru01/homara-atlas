@@ -506,9 +506,16 @@ export default function LiveChat() {
         throw new Error('Unexpected response from server');
       }
 
-      toast.success('Chat closed and ticket created', {
-        description: `Ticket ${data.ticket_number || 'created'} successfully`,
-      });
+      // Check if this is an existing ticket or a new one
+      if (data.existing_ticket) {
+        toast.success('Chat already closed', {
+          description: `Existing ticket ${data.ticket_number || ''} returned`,
+        });
+      } else {
+        toast.success('Chat closed and ticket created', {
+          description: `Ticket ${data.ticket_number || 'created'} successfully`,
+        });
+      }
 
       // Refresh sessions and clear selection
       fetchSessions();
