@@ -56,7 +56,7 @@ const HeatMaps = () => {
             </div>
             <div className="flex items-center gap-3 text-xs">
               <div className="w-4 h-4 rounded-full bg-destructive/80 border border-destructive shadow-glow"></div>
-              <span className="text-gray-600">Stagnant (<3% YoY)</span>
+              <span className="text-gray-600">Stagnant (&lt;3% YoY)</span>
             </div>
           </div>
         </div>
