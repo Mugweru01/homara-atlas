@@ -30,3 +30,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Terraform — never commit provider binaries or state files
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfstate.backup
+infrastructure/enterprise-arch.tf.backup
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo

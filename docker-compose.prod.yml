@@ -13,10 +13,12 @@ services:
     environment:
       - ENVIRONMENT=production
       - LOG_LEVEL=info
-      # Add production DB credentials here when switching from DuckDB
-      # - DB_USER=${DB_USER}
-      # - DB_PASS=${DB_PASS}
-      # - DB_HOST=${DB_HOST}
+      # RDS PostgreSQL credentials (injected from GitHub Secrets at deploy time)
+      - DB_HOST=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASS=${DB_PASS}
+      - DB_NAME=homara_atlas_dw
+      - DB_PORT=5432
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
       interval: 30s

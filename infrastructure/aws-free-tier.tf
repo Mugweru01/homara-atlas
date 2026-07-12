@@ -18,6 +18,7 @@ provider "aws" {
 resource "aws_instance" "app_server" {
   ami           = "ami-0c7217cdde317cfec" # Ubuntu 22.04 LTS (us-east-1)
   instance_type = "t3.micro"
+  key_name      = "homara-deploy-key"
   
   root_block_device {
     volume_size = 30 # Maximum free tier EBS limit
@@ -35,7 +36,7 @@ resource "aws_db_instance" "data_warehouse" {
   allocated_storage    = 20
   max_allocated_storage = 20 # Prevent auto-scaling costs
   engine               = "postgres"
-  engine_version       = "15.4"
+  engine_version       = "15"
   instance_class       = "db.t4g.micro"
   db_name              = "homara_atlas_dw"
   username             = "postgres_admin"
@@ -60,6 +61,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "raw_data_lifecycle" {
   rule {
     id     = "delete-old-data"
     status = "Enabled"
+    
+    filter {}
+
     # Delete raw files after 30 days to stay under the 5GB limit permanently
     expiration {
       days = 30
