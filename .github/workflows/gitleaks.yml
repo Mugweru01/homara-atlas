@@ -1,0 +1,35 @@
+name: Secret Scanning
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    name: Gitleaks Secret Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🔍 Run Gitleaks
+        # TODO: pin to a commit SHA once network tooling is available to
+        # verify the current release (see ci.yml trivy-action note).
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📊 Scan Summary
+        if: always()
+        run: |
+          echo "## 🔐 Secret Scan Complete" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "No secrets found in this diff, or the job above failed the build." >> $GITHUB_STEP_SUMMARY

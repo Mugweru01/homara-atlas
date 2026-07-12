@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: production
-      url: https://homara-gatekeeper.vercel.app
+      url: https://homara-atlas.vercel.app
 
     steps:
       - name: 📥 Checkout code

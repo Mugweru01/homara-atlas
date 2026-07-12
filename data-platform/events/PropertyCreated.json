@@ -1,0 +1,46 @@
+{
+  "$id": "https://homara-atlas.com/events/property-created.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "PropertyCreated",
+  "type": "object",
+  "properties": {
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Unique identifier for this event."
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time",
+      "description": "When the event occurred in ISO 8601 format."
+    },
+    "propertyId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "landlordId": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "address": {
+      "type": "object",
+      "properties": {
+        "street": { "type": "string" },
+        "city": { "type": "string" },
+        "state": { "type": "string" },
+        "zipCode": { "type": "string" },
+        "country": { "type": "string" }
+      },
+      "required": ["street", "city", "state", "zipCode", "country"]
+    },
+    "listingPrice": {
+      "type": "number",
+      "description": "The initial listed price or rent."
+    },
+    "propertyType": {
+      "type": "string",
+      "enum": ["APARTMENT", "HOUSE", "CONDO", "COMMERCIAL"]
+    }
+  },
+  "required": ["eventId", "timestamp", "propertyId", "landlordId", "address", "listingPrice", "propertyType"]
+}

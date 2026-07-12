@@ -1,0 +1,9 @@
+# dbt profiles.yml configured for DuckDB
+homara_atlas:
+  outputs:
+    dev:
+      type: duckdb
+      path: '../warehouse/homara_atlas.duckdb'
+      threads: 4
+      schema: main
+  target: dev

@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: ./api
+      dockerfile: Dockerfile
+    image: homara-atlas-api:latest
+    container_name: homara_atlas_api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - ENVIRONMENT=production
+      - LOG_LEVEL=info
+      # Add production DB credentials here when switching from DuckDB
+      # - DB_USER=${DB_USER}
+      # - DB_PASS=${DB_PASS}
+      # - DB_HOST=${DB_HOST}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    image: homara-atlas-web:latest
+    container_name: homara_atlas_web
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      # Next.js / Vite build-time or runtime env vars for API URL
+      - VITE_API_BASE_URL=http://api:8000
+    depends_on:
+      - api
+
+networks:
+  default:
+    name: homara_atlas_network

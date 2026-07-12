@@ -71,7 +71,11 @@ jobs:
         continue-on-error: true
 
       - name: 🔍 Check for vulnerabilities
-        uses: aquasecurity/trivy-action@master
+        # TODO: verify this is still the latest release and pin to a commit SHA
+        # (e.g. `uses: aquasecurity/trivy-action@<sha> # 0.28.0`) once network
+        # tooling is available - @master is a floating, unreviewed target and
+        # was replaced here as a stopgap.
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: 'fs'
           scan-ref: '.'

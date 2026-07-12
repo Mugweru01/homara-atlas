@@ -1,0 +1,80 @@
+name: Data & Infrastructure Validation
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+    paths:
+      - 'data-platform/**'
+      - 'infrastructure/**'
+      - '.github/workflows/data-infra-validation.yml'
+  pull_request:
+    branches: [ "main", "develop" ]
+    paths:
+      - 'data-platform/**'
+      - 'infrastructure/**'
+      - '.github/workflows/data-infra-validation.yml'
+
+jobs:
+  data-validation:
+    name: Data Engineering Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          
+      - name: Install SQLFluff
+        run: pip install sqlfluff
+        
+      - name: Lint SQL Files
+        run: |
+          if [ -d "data-platform/warehouse" ]; then
+            sqlfluff lint data-platform/warehouse --dialect postgres || echo "SQLFluff warnings found"
+          fi
+          
+      - name: Setup dbt
+        uses: dbt-labs/setup-dbt@v1
+        with:
+          dbt-version: '1.7.x'
+          
+      - name: dbt Compile
+        run: |
+          if [ -d "data-platform/dbt" ] && [ -f "data-platform/dbt/dbt_project.yml" ]; then
+            cd data-platform/dbt
+            dbt deps
+            dbt compile --target dev
+          fi
+
+  infrastructure-validation:
+    name: Infrastructure as Code Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.0
+          
+      - name: Terraform Format
+        run: |
+          if [ -d "infrastructure" ]; then
+            cd infrastructure
+            terraform fmt -check -recursive
+          fi
+          
+      - name: Terraform Validate
+        run: |
+          if [ -d "infrastructure" ]; then
+            cd infrastructure
+            terraform init -backend=false
+            terraform validate
+          fi
+          
+      - name: tfsec
+        uses: aquasecurity/tfsec-action@v1.0.3
+        with:
+          working_directory: ./infrastructure

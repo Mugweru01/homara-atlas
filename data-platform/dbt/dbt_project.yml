@@ -1,0 +1,57 @@
+name: 'homara_atlas'
+version: '1.0.0'
+config-version: 2
+
+profile: 'homara_atlas'
+
+# File paths
+model-paths:     ["models"]
+test-paths:      ["tests"]
+seed-paths:      ["seeds"]
+macro-paths:     ["macros"]
+snapshot-paths:  ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+# =============================================================================
+# Model configurations
+# =============================================================================
+models:
+  homara_atlas:
+
+    # STAGING: Views over raw external tables (atlas_raw schema in Redshift)
+    # These are cheap — they simply clean, cast, and rename raw source columns.
+    staging:
+      +materialized: view
+      +schema: staging
+      +tags: ["staging"]
+
+    # MARTS: Final materialised tables consumed by the API and dashboards
+    marts:
+      core:
+        +materialized: table
+        +schema: core
+        +tags: ["core"]
+        +post-hook: "GRANT SELECT ON {{ this }} TO GROUP atlas_readonly"
+      intelligence:
+        +materialized: table
+        +schema: intelligence
+        +tags: ["intelligence"]
+        +post-hook: "GRANT SELECT ON {{ this }} TO GROUP atlas_readonly"
+
+# =============================================================================
+# Seeds configuration
+# =============================================================================
+seeds:
+  homara_atlas:
+    +schema: seeds
+
+# =============================================================================
+# Variables
+# =============================================================================
+vars:
+  base_price_index_year: 2020   # Base year for Property Price Index (index = 100)
+  default_currency: 'KES'

@@ -1,0 +1,17 @@
+# These owners will be the default owners for everything in the repo.
+*       @homara-atlas/core-maintainers
+
+# Frontend apps
+/apps/  @homara-atlas/frontend-team
+
+# Backend API
+/api/   @homara-atlas/backend-team
+
+# Infrastructure
+/infrastructure/ @homara-atlas/devops-team
+
+# Data Platform
+/data-platform/ @homara-atlas/data-engineering-team
+
+# Workflows & GitHub specific files
+/.github/ @homara-atlas/devsecops-team

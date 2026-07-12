@@ -1,0 +1,82 @@
+version: 2
+
+# =============================================================================
+# Sources — defines where dbt reads raw data from
+# =============================================================================
+sources:
+  - name: atlas_raw
+    description: >
+      Raw data ingested into the S3 Data Lake. All data here is public, open, or anonymised.
+    schema: atlas_raw
+    tables:
+      - name: kenya_listings
+        description: "Raw Kenyan property listing data extracted by the EL pipeline."
+        freshness:
+          warn_after:  {count: 24, period: hour}
+          error_after: {count: 72, period: hour}
+        loaded_at_field: extracted_at
+        columns:
+          - name: listing_id
+            description: "Natural key from source. Must be unique per run."
+            tests:
+              - not_null
+              - unique
+          - name: neighbourhood
+            tests: [not_null]
+          - name: county
+            tests: [not_null]
+          - name: listing_price_ksh
+            tests:
+              - not_null
+          - name: asking_rent_ksh
+            tests:
+              - not_null
+          - name: source
+            tests:
+              - accepted_values:
+                  values: ['synthetic_public_data', 'kenya_knbs', 'openstreetmap', 'kenya_land_registry']
+
+# =============================================================================
+# Staging Models
+# =============================================================================
+models:
+  - name: stg_kenya_listings
+    description: >
+      Staged Kenya property listings. Cleans, casts, and renames raw columns.
+      Adds surrogate geography key using MD5 hash of county + neighbourhood.
+    config:
+      materialized: view
+    columns:
+      - name: listing_id
+        tests: [not_null, unique]
+      - name: geography_key
+        tests: [not_null]
+      - name: listing_price_ksh
+        tests: [not_null]
+      - name: property_type
+        tests:
+          - accepted_values:
+              values: ['Apartment', 'Villa', 'Townhouse', 'Bungalow', 'Maisonette', 'Land', 'Office', 'Retail', 'Warehouse']
+
+  - name: dim_neighbourhood
+    description: >
+      Neighbourhood dimension enriched with geographic context.
+      One row per unique county + neighbourhood combination.
+    config:
+      materialized: table
+    columns:
+      - name: geography_key
+        tests: [not_null, unique]
+
+  - name: fct_property_price_index
+    description: >
+      Monthly Property Price Index by county and property type.
+      Index base: Jan 2020 = 100.
+    config:
+      materialized: table
+    columns:
+      - name: county
+        tests: [not_null]
+      - name: ppi_value
+        tests:
+          - not_null
