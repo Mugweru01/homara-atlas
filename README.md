@@ -1,4 +1,4 @@
-# Homara Gatekeeper - Admin Panel
+# Homara Atlas - Admin Panel
 
 <div align="center">
 
