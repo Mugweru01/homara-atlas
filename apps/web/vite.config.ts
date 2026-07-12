@@ -8,6 +8,14 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    proxy: {
+      // Proxy all /api calls to the FastAPI backend — this eliminates CORS in dev
+      "/api": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        secure: false,
+      },
+    },
     watch: {
       // Exclude other projects from being watched
       ignored: [
@@ -23,6 +31,7 @@ export default defineConfig(({ mode }) => ({
       allow: [__dirname],
     },
   },
+
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {
     alias: {

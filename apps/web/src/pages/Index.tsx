@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { ArrowUpRight, ArrowDownRight, Building2, MapPin, Activity, TrendingUp, RefreshCw } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
 
-const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_URL ?? "";
 const API_V1   = `${API_BASE}/api/v1`;
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
