@@ -4,7 +4,9 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "api": "py -m uvicorn app.main:app --reload",
+    "dev": "concurrently --kill-others --names \"API,WEB\" --prefix-colors \"green,blue\" \"cd ../../api && py -m uvicorn app.main:app --reload\" \"vite\"",
+    "dev:web": "vite",
     "build": "tsx vite-env-validate.ts && vite build",
     "build:dev": "tsx vite-env-validate.ts && vite build --mode development",
     "lint": "eslint .",
@@ -88,6 +90,7 @@
     "@types/react-dom": "^18.3.7",
     "@vitejs/plugin-react-swc": "^4.2.0",
     "autoprefixer": "^10.4.21",
+    "concurrently": "^10.0.3",
     "eslint": "^9.32.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.20",
