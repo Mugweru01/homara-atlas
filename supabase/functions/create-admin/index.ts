@@ -6,13 +6,10 @@ import * as bcrypt from 'https://deno.land/x/bcrypt@v0.4.1/mod.ts';
 function getCorsHeaders(origin: string | null): Record<string, string> {
   const allowedOrigin = Deno.env.get('ADMIN_ORIGIN') || 'https://admin.homara.com';
   
-  // Allow local development origins (localhost, 127.0.0.1, or local IP addresses)
+  // Allow only localhost for local development (not broad IP ranges)
   const isLocalDev = origin && (
     origin.startsWith('http://localhost:') ||
-    origin.startsWith('http://127.0.0.1:') ||
-    origin.startsWith('http://192.168.') ||
-    origin.startsWith('http://10.') ||
-    origin.startsWith('http://172.')
+    origin.startsWith('http://127.0.0.1:')
   );
   
   const corsOrigin = isLocalDev ? origin : allowedOrigin;
@@ -48,7 +45,6 @@ Deno.serve(async (req: Request) => {
     const authHeader = req.headers.get('Authorization') || req.headers.get('authorization');
     
     if (!authHeader) {
-      console.error('Missing authorization header. Headers:', Object.fromEntries(req.headers.entries()));
       return new Response(
         JSON.stringify({ error: 'Missing authorization header. Please ensure you are logged in.' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -164,14 +160,12 @@ Deno.serve(async (req: Request) => {
             );
           }
         } catch (lookupError) {
-          console.error('Error looking up existing user:', lookupError);
           return new Response(
             JSON.stringify({ error: 'Failed to find existing user account' }),
             { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
           );
         }
       } else {
-        console.error('Error creating user:', createUserError);
         return new Response(
           JSON.stringify({ error: 'Failed to create user account', details: createUserError.message }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -208,13 +202,12 @@ Deno.serve(async (req: Request) => {
     try {
       hashedCode = await bcrypt.hash(adminCode, 12);
     } catch (hashError) {
-      console.error('Error hashing admin code:', hashError);
       // If admin record creation fails but user was created, we should clean up
       if (!existingUser) {
         try {
           await supabaseAdmin.auth.admin.deleteUser(userId);
         } catch (deleteError) {
-          console.error('Error cleaning up user:', deleteError);
+          // Error cleaning up user
         }
       }
       return new Response(
@@ -241,13 +234,12 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (createAdminError) {
-      console.error('Error creating admin record:', createAdminError);
       // If admin record creation fails but user was created, we should clean up
       if (!existingUser) {
         try {
           await supabaseAdmin.auth.admin.deleteUser(userId);
         } catch (deleteError) {
-          console.error('Error cleaning up user:', deleteError);
+          // Error cleaning up user
         }
       }
       return new Response(
@@ -272,15 +264,12 @@ Deno.serve(async (req: Request) => {
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error) {
-    console.error('Error in create-admin function:', error);
     const errorMessage = error instanceof Error ? error.message : String(error);
     const errorDetails = error instanceof Error ? {
       message: error.message,
       stack: error.stack,
       name: error.name
     } : String(error);
-    
-    console.error('Error details:', JSON.stringify(errorDetails));
     
     return new Response(
       JSON.stringify({ 

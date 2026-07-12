@@ -160,7 +160,6 @@ export default function SupportTickets() {
       setTickets(processedTickets);
     } catch (error: any) {
       logger.error('Error fetching tickets:', error);
-      console.error('Tickets fetch error:', error);
       setTickets([]);
       if (error?.code !== '42P01' && error?.code !== 'PGRST116' && 
           !error?.message?.includes('does not exist') && !error?.message?.includes('schema cache')) {

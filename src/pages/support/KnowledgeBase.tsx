@@ -66,7 +66,6 @@ export default function KnowledgeBase() {
       setArticles(data || []);
     } catch (error: any) {
       logger.error('Error fetching KB articles:', error);
-      console.error('KB fetch error:', error);
       setArticles([]);
     } finally {
       setLoading(false);

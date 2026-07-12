@@ -103,8 +103,6 @@ export function useAdmin() {
         });
 
         const text = await response.text();
-        console.log('Edge Function response status:', response.status);
-        console.log('Edge Function response body:', text);
 
         try {
           responseData = JSON.parse(text);
@@ -120,12 +118,10 @@ export function useAdmin() {
           };
         }
       } catch (err: any) {
-        console.error('Edge Function fetch exception:', err);
         responseError = err;
       }
 
       if (responseError) {
-        console.error('Edge Function error:', responseError);
         await recordFailedLogin(email);
         const errorMsg = responseError.message || responseData?.error || 'Failed to connect to authentication service';
         await logAdminLogin(false, email, errorMsg);
@@ -135,7 +131,6 @@ export function useAdmin() {
       if (!responseData?.success) {
         await recordFailedLogin(email);
         const errorMsg = responseData?.error || 'Invalid email or admin code';
-        console.error('Admin auth error:', responseData?.error, 'Details:', responseData?.details);
         await logAdminLogin(false, email, errorMsg);
         return { error: { message: errorMsg } };
       }

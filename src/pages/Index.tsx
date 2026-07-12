@@ -17,7 +17,7 @@ const Index = () => {
           setLogoUrl(data.publicUrl);
         }
       } catch (error) {
-        console.error('Error fetching logo:', error);
+        // Error fetching logo, using default
       } finally {
         setIsLoading(false);
       }

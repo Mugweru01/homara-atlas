@@ -88,7 +88,6 @@ export default function ArticleDetail() {
       }
     } catch (error: any) {
       logger.error('Error fetching article:', error);
-      console.error('Article fetch error:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to fetch article',

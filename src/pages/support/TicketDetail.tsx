@@ -185,7 +185,6 @@ export default function SupportTicketDetail() {
       }
     } catch (error: any) {
       logger.error('Error fetching ticket data:', error);
-      console.error('Ticket fetch error:', error);
       toast({
         title: 'Error',
         description: error.message || 'Failed to fetch ticket data',

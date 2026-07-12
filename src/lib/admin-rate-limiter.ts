@@ -55,56 +55,82 @@ export async function checkRateLimit(
   type: RateLimitType = 'admin_api'
 ): Promise<RateLimitResult> {
   try {
-    // Check if Redis is available (browser environment check)
-    const url = import.meta.env.VITE_UPSTASH_REDIS_REST_URL;
-    const token = import.meta.env.VITE_UPSTASH_REDIS_REST_TOKEN;
-    
-    if (!url || !token) {
-      // Redis not configured - allow request (fail open)
-      logger.warn('Redis not configured, skipping rate limit', { identifier, type });
-      return {
-        allowed: true,
-        remaining: -1,
-        resetAt: Date.now() + 60000,
-      };
-    }
-
     const config = RATE_LIMITS[type];
     const key = `rate_limit:admin:${type}:${identifier}`;
     
-    // Try to get current count, but fail gracefully if Redis is unavailable
-    let current = 0;
-    try {
-      const currentStr = await redisHelpers.get(key);
-      current = currentStr ? parseInt(String(currentStr), 10) : 0;
-    } catch (redisError) {
-      // Redis connection failed - allow request (fail open)
-      logger.warn('Redis connection failed, skipping rate limit', { error: redisError, identifier, type });
-      return {
-        allowed: true,
-        remaining: -1,
-        resetAt: Date.now() + 60000,
-      };
+    // Check if Redis is available
+    const url = import.meta.env.VITE_UPSTASH_REDIS_REST_URL;
+    const token = import.meta.env.VITE_UPSTASH_REDIS_REST_TOKEN;
+    
+    if (url && token) {
+      // Try Redis first
+      try {
+        const currentStr = await redisHelpers.get(key);
+        const current = currentStr ? parseInt(String(currentStr), 10) : 0;
+        
+        const now = Date.now();
+        const resetAt = now + (config.windowSeconds * 1000);
+        
+        if (current >= config.maxAttempts) {
+          let retryAfter: number = config.windowSeconds;
+          try {
+            const ttl = await redisHelpers.ttl(key);
+            retryAfter = ttl > 0 ? ttl : config.windowSeconds;
+          } catch (ttlError) {
+            // If TTL check fails, use default window
+          }
+          
+          logger.warn('Rate limit exceeded', {
+            identifier,
+            type,
+            current,
+            max: config.maxAttempts,
+            retryAfter,
+          });
+          
+          return {
+            allowed: false,
+            remaining: 0,
+            resetAt,
+            retryAfter,
+          };
+        }
+        
+        let newCount = await redisHelpers.incr(key);
+        
+        if (newCount === 1) {
+          await redisHelpers.expire(key, config.windowSeconds);
+        }
+        
+        return {
+          allowed: true,
+          remaining: config.maxAttempts - newCount,
+          resetAt,
+        };
+      } catch (redisError) {
+        logger.warn('Redis rate limit failed, falling back to localStorage', { error: redisError, identifier, type });
+        // Fall through to localStorage fallback
+      }
     }
     
-    const now = Date.now();
-    const resetAt = now + (config.windowSeconds * 1000);
+    // Fallback to localStorage (client-side rate limiting)
+    const localStorageKey = key;
+    const stored = localStorage.getItem(localStorageKey);
+    const data = stored ? JSON.parse(stored) : { count: 0, resetAt: Date.now() + (config.windowSeconds * 1000) };
     
-    // Check if limit exceeded
-    if (current >= config.maxAttempts) {
-      let retryAfter = config.windowSeconds;
-      try {
-        const ttl = await redisHelpers.ttl(key);
-        retryAfter = ttl > 0 ? ttl : config.windowSeconds;
-      } catch (ttlError) {
-        // If TTL check fails, use default window
-        logger.warn('Failed to get TTL, using default', { error: ttlError });
-      }
+    // Reset if window expired
+    if (Date.now() > data.resetAt) {
+      data.count = 0;
+      data.resetAt = Date.now() + (config.windowSeconds * 1000);
+    }
+    
+    if (data.count >= config.maxAttempts) {
+      const retryAfter = Math.ceil((data.resetAt - Date.now()) / 1000);
       
-      logger.warn('Rate limit exceeded', {
+      logger.warn('Rate limit exceeded (localStorage)', {
         identifier,
         type,
-        current,
+        current: data.count,
         max: config.maxAttempts,
         retryAfter,
       });
@@ -112,41 +138,27 @@ export async function checkRateLimit(
       return {
         allowed: false,
         remaining: 0,
-        resetAt,
+        resetAt: data.resetAt,
         retryAfter,
       };
     }
     
-    // Increment counter
-    let newCount = 1;
-    try {
-      newCount = await redisHelpers.incr(key);
-      
-      // Set expiry on first increment
-      if (newCount === 1) {
-        await redisHelpers.expire(key, config.windowSeconds);
-      }
-    } catch (incrError) {
-      // If increment fails, allow the request (fail open)
-      logger.warn('Failed to increment rate limit counter', { error: incrError });
-      return {
-        allowed: true,
-        remaining: -1,
-        resetAt: Date.now() + 60000,
-      };
-    }
+    data.count += 1;
+    localStorage.setItem(localStorageKey, JSON.stringify(data));
     
     return {
       allowed: true,
-      remaining: config.maxAttempts - newCount,
-      resetAt,
+      remaining: config.maxAttempts - data.count,
+      resetAt: data.resetAt,
     };
   } catch (error) {
-    // On Redis error, allow the request (fail open)
-    logger.error('Rate limit check failed', { error, identifier, type });
+    // On complete failure, still try localStorage as last resort
+    logger.error('Rate limit check failed completely', { error, identifier, type });
+    
+    // Very conservative fallback - allow but with minimal remaining
     return {
       allowed: true,
-      remaining: -1,
+      remaining: 1,
       resetAt: Date.now() + 60000,
     };
   }

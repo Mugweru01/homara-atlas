@@ -5,13 +5,10 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3';
 function getCorsHeaders(origin: string | null): Record<string, string> {
   const allowedOrigin = Deno.env.get('ADMIN_ORIGIN') || 'https://admin.homara.com';
   
-  // Allow local development origins (localhost, 127.0.0.1, or local IP addresses)
+  // Allow only localhost for local development (not broad IP ranges)'
   const isLocalDev = origin && (
     origin.startsWith('http://localhost:') ||
-    origin.startsWith('http://127.0.0.1:') ||
-    origin.startsWith('http://192.168.') ||
-    origin.startsWith('http://10.') ||
-    origin.startsWith('http://172.')
+    origin.startsWith('http://127.0.0.1:')
   );
   
   const corsOrigin = isLocalDev ? origin : allowedOrigin;
@@ -63,46 +60,27 @@ Deno.serve(async (req: Request) => {
       .single();
 
     if (adminError || !adminData) {
-      console.error('Admin lookup failed:', adminError);
       return new Response(
         JSON.stringify({ error: 'Invalid email or admin code' }),
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    // Verify admin code
-    // For now, we'll use the plain code stored in admin_code column
-    // The hash verification can be added later once basic flow works
+    // Verify admin code using hash only (no plain text fallback)
     let isValidCode = false;
     
-    try {
-      // First try to verify using the database function if hash exists
-      if (adminData.admin_code_hash) {
-        try {
-          const { data: verifyData, error: verifyError } = await supabaseAdmin.rpc('verify_admin_code', {
-            p_email: email,
-            p_code: adminCode
-          });
-          
-          if (!verifyError && verifyData === true) {
-            isValidCode = true;
-          } else {
-            console.error('Hash verification failed, falling back to plain code:', verifyError);
-          }
-        } catch (rpcError) {
-          console.error('RPC call error:', rpcError);
+    if (adminData.admin_code_hash) {
+      try {
+        const { data: verifyData, error: verifyError } = await supabaseAdmin.rpc('verify_admin_code', {
+          p_email: email,
+          p_code: adminCode
+        });
+        
+        if (!verifyError && verifyData === true) {
+          isValidCode = true;
         }
-      }
-      
-      // Fallback to plain code comparison (always check this as backup)
-      if (!isValidCode && adminData.admin_code) {
-        isValidCode = adminData.admin_code === adminCode;
-      }
-    } catch (verifyError) {
-      console.error('Code verification error:', verifyError);
-      // Final fallback
-      if (adminData.admin_code && adminData.admin_code === adminCode) {
-        isValidCode = true;
+      } catch (rpcError) {
+        // Hash verification failed
       }
     }
 
@@ -154,7 +132,7 @@ Deno.serve(async (req: Request) => {
           }
         }
       } catch (findError) {
-        console.error('Error finding user:', findError);
+        // Error finding user, continuing with existing user_id
       }
     } else {
       // User_id is already linked, but ensure profile exists
@@ -211,7 +189,6 @@ Deno.serve(async (req: Request) => {
         });
         
         if (createError) {
-          console.error('Failed to create user:', createError);
           return new Response(
             JSON.stringify({ 
               error: 'Failed to set up authentication: ' + (createError.message || 'Could not create user account'),
@@ -247,10 +224,7 @@ Deno.serve(async (req: Request) => {
               });
             
             if (profileError) {
-              console.error('Failed to create profile:', profileError);
-              // Continue anyway - we'll try to link user_id
-            } else {
-              console.log('Profile created successfully');
+              // Profile creation failed, continuing with user_id link
             }
           }
           
@@ -261,10 +235,7 @@ Deno.serve(async (req: Request) => {
             .eq('email', email);
           
           if (linkError) {
-            console.error('Failed to link user_id to admin:', linkError);
-            // Continue anyway - user can still log in
-          } else {
-            console.log('Successfully linked user_id to admin');
+            // Failed to link user_id, but user can still log in
           }
           
           // Retry generateLink now that user exists
@@ -305,7 +276,6 @@ Deno.serve(async (req: Request) => {
     }
 
     if (sessionError) {
-      console.error('Session error:', sessionError);
       return new Response(
         JSON.stringify({ 
           error: 'Failed to create session: ' + (sessionError.message || 'Unknown error'),
@@ -316,7 +286,6 @@ Deno.serve(async (req: Request) => {
     }
     
     if (!sessionData) {
-      console.error('No session data returned');
       return new Response(
         JSON.stringify({ error: 'Failed to create session: No session data returned' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -332,13 +301,10 @@ Deno.serve(async (req: Request) => {
     );
 
   } catch (error) {
-    console.error('Admin auth error:', error);
     let errorMessage = 'Authentication failed';
     if (error instanceof Error) {
       errorMessage = error.message;
-      console.error('Error stack:', error.stack);
     } else {
-      console.error('Error (not Error instance):', String(error));
       errorMessage = String(error);
     }
     return new Response(
