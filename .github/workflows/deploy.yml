@@ -3,6 +3,8 @@ name: Deploy to AWS EC2 (Free Tier)
 on:
   push:
     branches: [ "main" ]
+  workflow_dispatch:
+
 
 jobs:
   deploy:
