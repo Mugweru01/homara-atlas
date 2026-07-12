@@ -50,11 +50,27 @@ def _load_latest_parquet() -> pd.DataFrame:
 # GET /api/v1/analytics/overview  — Dashboard summary KPIs
 # ---------------------------------------------------------------------------
 
-@router.get("/overview", summary="Market Overview KPIs")
+@router.get(
+    "/overview",
+    summary="Market Overview KPIs",
+    response_description="Top-level market intelligence KPIs including average price, rent, and listings count.",
+    responses={
+        200: {"description": "KPI summary returned successfully."},
+        503: {"description": "Data source unavailable — run the ingestion pipeline first."},
+        500: {"description": "Internal server error during database query."},
+    },
+)
 async def get_overview() -> JSONResponse:
     """
     Returns top-level market intelligence KPIs for the dashboard Overview page.
-    Production: queries RDS PostgreSQL. Dev: reads local Parquet files.
+
+    - **avg_listing_price_ksh**: Average listing price across all property types (KES)
+    - **avg_rent_ksh**: Average monthly asking rent across all neighbourhoods (KES)
+    - **counties_covered**: Number of distinct counties with active listings
+    - **total_listings**: Total number of active property listings indexed
+
+    **Production**: queries RDS PostgreSQL (`stg_kenya_listings`).
+    **Development**: reads local Parquet files produced by the EL pipeline.
     """
     try:
         if ENVIRONMENT == "production":
