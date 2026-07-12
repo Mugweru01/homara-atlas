@@ -6,6 +6,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import PriceIndex from "./pages/PriceIndex";
+import Neighbourhoods from "./pages/Neighbourhoods";
+import Affordability from "./pages/Affordability";
+import HeatMaps from "./pages/HeatMaps";
+import DeveloperAPI from "./pages/DeveloperAPI";
 import { DashboardLayout } from "./layouts/DashboardLayout";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 
@@ -27,6 +32,11 @@ const App = () => (
               <Routes>
                 <Route element={<DashboardLayout />}>
                   <Route path="/" element={<Index />} />
+                  <Route path="/price-index" element={<PriceIndex />} />
+                  <Route path="/neighbourhoods" element={<Neighbourhoods />} />
+                  <Route path="/affordability" element={<Affordability />} />
+                  <Route path="/heatmaps" element={<HeatMaps />} />
+                  <Route path="/api-docs" element={<DeveloperAPI />} />
                   <Route path="*" element={<NotFound />} />
                 </Route>
               </Routes>

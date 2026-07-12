@@ -14,25 +14,33 @@ export const DashboardLayout = () => {
         </div>
         
         <nav className="flex-1 p-4 space-y-2">
-          <Link to="/" className="flex items-center gap-3 px-3 py-2 rounded-md bg-primary/10 text-primary font-medium">
+          <Link to="/" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary/10 text-gray-700 hover:text-primary transition-colors font-medium">
             <LayoutDashboard className="w-5 h-5" />
             Overview
           </Link>
-          <Link to="#" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors">
+          <Link to="/price-index" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary/10 text-gray-700 hover:text-primary transition-colors font-medium">
+            <BarChart3 className="w-5 h-5" />
+            Price Index
+          </Link>
+          <Link to="/neighbourhoods" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary/10 text-gray-700 hover:text-primary transition-colors font-medium">
             <Map className="w-5 h-5" />
             Neighbourhoods
           </Link>
-          <Link to="#" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors">
-            <BarChart3 className="w-5 h-5" />
-            Market Trends
-          </Link>
-          <Link to="#" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors">
+          <Link to="/affordability" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary/10 text-gray-700 hover:text-primary transition-colors font-medium">
             <Database className="w-5 h-5" />
-            Data Sources
+            Affordability
+          </Link>
+          <Link to="/heatmaps" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary/10 text-gray-700 hover:text-primary transition-colors font-medium">
+            <Map className="w-5 h-5" />
+            Heat Maps
           </Link>
         </nav>
 
-        <div className="p-4 border-t border-border">
+        <div className="p-4 border-t border-border space-y-2">
+          <Link to="/api-docs" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-primary/10 text-gray-700 hover:text-primary transition-colors font-medium">
+            <Database className="w-5 h-5" />
+            Developer API
+          </Link>
           <Link to="#" className="flex items-center gap-3 px-3 py-2 rounded-md hover:bg-gray-100 text-gray-700 transition-colors">
             <Settings className="w-5 h-5" />
             Settings
