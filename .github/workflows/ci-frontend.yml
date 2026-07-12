@@ -35,7 +35,7 @@ jobs:
         
     # The repository uses bun, but package-lock is present. We will use bun for speed.
     - name: Setup Bun
-      uses: oven-sh/setup-bun@v1
+      uses: oven-sh/setup-bun@v2
       with:
         bun-version: latest
 
