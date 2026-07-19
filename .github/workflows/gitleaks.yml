@@ -23,7 +23,7 @@ jobs:
       - name: 🔍 Run Gitleaks
         # TODO: pin to a commit SHA once network tooling is available to
         # verify the current release (see ci.yml trivy-action note).
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
