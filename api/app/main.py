@@ -30,17 +30,69 @@ from app.routers import analytics, health, ingestion
 
 app = FastAPI(
     title="Homara Atlas Intelligence API",
-    description=(
-        "The official API for the Homara Atlas Property Intelligence Platform. "
-        "Provides market analytics, price indices, and neighbourhood intelligence "
-        "derived exclusively from public and open datasets. "
-        "No PII, operational, or Homara-internal data is ever processed here."
-    ),
+    description="""
+## Overview
+The **Homara Atlas Intelligence API** is the official data access layer for the Homara Atlas Property Intelligence Platform.
+
+It transforms large volumes of public, economic, and geographic data into actionable market intelligence — serving as the **definitive source of truth** for the Kenyan real estate market.
+
+---
+
+## Key Principles
+- 🔒 **No PII**: No customer, payment, or employee data is ever stored or processed.
+- 📊 **Intelligence First**: Every endpoint answers a specific market question.
+- 🌍 **Public Data Centric**: All data originates from open, aggregated, and anonymized datasets.
+- 🔄 **Versioned**: All routes are versioned under `/api/v{N}/`. Breaking changes increment the major version.
+
+---
+
+## Endpoints (v1)
+
+| Endpoint | Description |
+|---|---|
+| `GET /api/v1/system/health` | Platform health check |
+| `GET /api/v1/analytics/overview` | Dashboard KPI summary |
+| `GET /api/v1/analytics/price-index` | Property & Rental Price Index |
+| `GET /api/v1/analytics/neighbourhoods` | Neighbourhood intelligence |
+| `POST /api/v1/ingestion/trigger/{source}` | Trigger EL data pipeline |
+| `GET /api/v1/ingestion/jobs` | EL job history |
+
+---
+
+## Data Sources
+All data is sourced exclusively from public datasets including government portals,
+open property listing aggregators, and economic databases. No operational Homara
+data is accessible through this API.
+    """,
     version="1.0.0",
+    contact={
+        "name": "Homara Atlas Team",
+        "url": "https://atlas.homara.co.ke",
+        "email": "atlas@homara.co.ke",
+    },
+    license_info={
+        "name": "Proprietary — Homara",
+        "url": "https://homara.co.ke/terms",
+    },
+    openapi_tags=[
+        {
+            "name": "v1 · System",
+            "description": "Platform health, metrics, and status endpoints.",
+        },
+        {
+            "name": "v1 · Market Intelligence",
+            "description": "Core analytics products: price indices, neighbourhood intelligence, and KPI dashboards.",
+        },
+        {
+            "name": "v1 · Data Ingestion",
+            "description": "EL pipeline triggers and job monitoring for ingesting public property datasets.",
+        },
+    ],
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
 )
+
 
 # ---------------------------------------------------------------------------
 # CORS Middleware
