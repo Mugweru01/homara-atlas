@@ -85,6 +85,7 @@ Operate ingestion pipelines, analytics workflows, and market intelligence system
 # 📸 Screenshots
 
 > 🚧 Screenshots will be updated as the platform approaches public release.
+<img width="575" height="87" alt="image" src="https://github.com/user-attachments/assets/8bf70e7b-1781-40fa-8979-330a2718553a" />
 
 ## Market Overview Dashboard
 
