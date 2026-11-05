@@ -42,3 +42,4 @@ infrastructure/enterprise-arch.tf.backup
 __pycache__/
 *.py[cod]
 *.pyo
+.neon
