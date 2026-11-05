@@ -1,17 +1,18 @@
-import { defineConfig } from "vite";
-import react from "@vitejs/plugin-react-swc";
-import path from "path";
-import { componentTagger } from "lovable-tagger";
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react-swc';
+import path from 'path';
+import { componentTagger } from 'lovable-tagger';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
   server: {
-    host: "::",
-    port: 8080,
+    host: '::',
+    port: 5184,
+    strictPort: true,
     proxy: {
-      // Proxy all /api calls to the FastAPI backend — this eliminates CORS in dev
-      "/api": {
-        target: "http://localhost:8000",
+      // Proxy all /api calls to the FastAPI backend â€” this eliminates CORS in dev
+      '/api': {
+        target: 'http://localhost:8000',
         changeOrigin: true,
         secure: false,
       },
@@ -32,10 +33,10 @@ export default defineConfig(({ mode }) => ({
     },
   },
 
-  plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
+  plugins: [react(), mode === 'development' && componentTagger()].filter(Boolean),
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src"),
+      '@': path.resolve(__dirname, './src'),
     },
     // Prevent resolving imports from other projects
     dedupe: ['react', 'react-dom'],
@@ -50,53 +51,52 @@ export default defineConfig(({ mode }) => ({
         assetFileNames: `assets/[name]-[hash]-${Date.now()}.[ext]`,
         manualChunks: {
           // Core React (140KB)
-          vendor: ["react", "react-dom"],
-          router: ["react-router-dom"],
-          
+          vendor: ['react', 'react-dom'],
+          router: ['react-router-dom'],
+
           // UI Components (109KB)
           ui: [
-            "@radix-ui/react-dialog",
-            "@radix-ui/react-dropdown-menu",
-            "@radix-ui/react-select",
-            "@radix-ui/react-tooltip",
-            "@radix-ui/react-tabs",
-            "@radix-ui/react-popover",
+            '@radix-ui/react-dialog',
+            '@radix-ui/react-dropdown-menu',
+            '@radix-ui/react-select',
+            '@radix-ui/react-tooltip',
+            '@radix-ui/react-tabs',
+            '@radix-ui/react-popover',
           ],
-          
+
           // Supabase (157KB)
-          supabase: ["@supabase/supabase-js"],
-          
+
           // Query & State Management (60KB)
-          query: ["@tanstack/react-query"],
-          
+          query: ['@tanstack/react-query'],
+
           // Charts & Analytics
-          charts: ["recharts"],
-          
+          charts: ['recharts'],
+
           // Utilities
-          utils: ["date-fns", "lucide-react"],
+          utils: ['date-fns', 'lucide-react'],
         },
       },
     },
     // Enable source maps for production debugging
-    sourcemap: mode === "development",
+    sourcemap: mode === 'development',
     // Set chunk size warning limit
     chunkSizeWarningLimit: 1000,
   },
   // Optimize dependencies
   optimizeDeps: {
     include: [
-      "react",
-      "react-dom",
-      "react-router-dom",
-      "@supabase/supabase-js",
-      "@tanstack/react-query",
-      "recharts",
-      "@radix-ui/react-alert-dialog",
-      "@radix-ui/react-dialog",
-      "@radix-ui/react-select",
-      "@radix-ui/react-dropdown-menu",
-      "@radix-ui/react-tooltip",
-      "@upstash/redis",
+      'react',
+      'react-dom',
+      'react-router-dom',
+
+      '@tanstack/react-query',
+      'recharts',
+      '@radix-ui/react-alert-dialog',
+      '@radix-ui/react-dialog',
+      '@radix-ui/react-select',
+      '@radix-ui/react-dropdown-menu',
+      '@radix-ui/react-tooltip',
+      '@upstash/redis',
     ],
     force: true,
   },
@@ -105,6 +105,6 @@ export default defineConfig(({ mode }) => ({
     // Polyfill process for packages that expect it (like @upstash/redis)
     'process.env.NODE_ENV': JSON.stringify(mode),
     'process.env': '{}',
-    'global': 'globalThis',
+    global: 'globalThis',
   },
 }));

@@ -1,6 +1,36 @@
 {
+  "name": "homara-atlas",
+  "private": true,
+  "scripts": {
+    "build": "npm --prefix apps/web run build",
+    "dev": "npm --prefix apps/web run dev",
+    "type-check": "npm --prefix apps/web run type-check",
+    "lint": "npm --prefix apps/web run lint",
+    "format:check": "npm --prefix apps/web run format:check",
+    "test": "npm --prefix apps/web test",
+    "check:functions": "tsc --noEmit",
+    "test:backend": "node --import tsx --test --test-concurrency=1 backend-tests/*.test.ts",
+    "db:provision": "node --env-file=.env.local scripts/provision-backend.mjs",
+    "db:operator": "node --env-file=.env.local scripts/operator.mjs",
+    "db:backup": "node --env-file=.env.local --env-file=.env.backup.local scripts/backup-backend.mjs",
+    "db:migrate": "node --env-file=.env.local scripts/migrate.mjs",
+    "smoke:neon": "node --env-file=.env.local scripts/smoke-neon.mjs"
+  },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1162.0",
+    "@aws-sdk/s3-request-presigner": "^3.1162.0",
     "@neon/config": "^1.10.1",
-    "@neon/env": "^1.6.9"
+    "@neon/env": "^1.6.9",
+    "@neon/functions": "^0.11.0",
+    "@neon/realtime": "^0.2.0",
+    "hono": "^4.13.16",
+    "jose": "^6.2.15",
+    "pg": "^8.23.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
   }
 }

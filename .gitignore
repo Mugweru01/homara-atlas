@@ -43,3 +43,11 @@ __pycache__/
 *.py[cod]
 *.pyo
 .neon
+.venv/
+.vercel
+
+# Local verification artifacts
+*.local.mjs
+*.local.mts
+.playwright-mcp/
+data-platform/raw/

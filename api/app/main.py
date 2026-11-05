@@ -1,138 +1,110 @@
-"""
-Homara Atlas — FastAPI Application Entry Point.
+"""Optional local demonstration API / read-only bridge to the canonical Neon API.
 
-Versioning strategy:
-  - All API routes live under /api/v{N}/...
-  - Breaking changes increment the major version
-  - Current stable: v1
-  - A v_router (APIRouter) aggregates all v1 routers so a future v2
-    is added by duplicating v_router with a new prefix — no route changes needed.
-
-Route map (v1):
-  /api/v1/system/health          → system health check
-  /api/v1/ingestion/trigger/*    → EL pipeline triggers
-  /api/v1/ingestion/jobs         → job history
-  /api/v1/analytics/overview     → dashboard KPI summary
-  /api/v1/analytics/price-index  → Property Price Index
-  /api/v1/analytics/neighbourhoods → Neighbourhood intelligence
+Production collection, auth and metrics are implemented in functions/backend.
+The bridge never reads the warehouse or runs synthetic ingestion in production.
 """
 
-from fastapi import FastAPI
+import os
+from urllib.parse import urlparse
+
+import httpx
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
-from fastapi.routing import APIRouter
-
-from app.routers import analytics, health, ingestion
-
-# ---------------------------------------------------------------------------
-# Application Factory
-# ---------------------------------------------------------------------------
-
-app = FastAPI(
-    title="Homara Atlas Intelligence API",
-    description=(
-        "The official API for the Homara Atlas Property Intelligence Platform. "
-        "Provides market analytics, price indices, and neighbourhood intelligence "
-        "derived exclusively from public and open datasets. "
-        "No PII, operational, or Homara-internal data is ever processed here."
-    ),
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json",
-)
-
-# ---------------------------------------------------------------------------
-# CORS Middleware
-# ---------------------------------------------------------------------------
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:8080",
-        "http://localhost:8081",
-        "http://127.0.0.1:5173",
-        "http://127.0.0.1:8080",
-        # Allow any local network IP (development only)
-        "http://192.168.100.8:8080",
-        "http://192.168.100.8:5173",
-        "https://atlas.homara.co.ke",
-    ],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 
 
-# ---------------------------------------------------------------------------
-# HTTP Request Metrics Middleware
-# ---------------------------------------------------------------------------
-import time
-from fastapi import Request
-from app.routers.health import METRICS
-
-@app.middleware("http")
-async def http_metrics_middleware(request: Request, call_next):
-    # Skip metrics path to avoid noise
-    if "/system/metrics" in request.url.path:
-        return await call_next(request)
-
-    start_time = time.time()
-    response = await call_next(request)
-    process_time = time.time() - start_time
-
-    METRICS["http_requests_total"] += 1
-    METRICS["http_request_duration_seconds_sum"] += process_time
-    METRICS["http_request_duration_seconds_count"] += 1
-
-    return response
-
-# ---------------------------------------------------------------------------
-# v1 Router — aggregates all v1 sub-routers under /api/v1
-# To introduce v2 in the future: duplicate this block with prefix="/api/v2"
-# ---------------------------------------------------------------------------
-
-v1_router = APIRouter(prefix="/api/v1")
-
-v1_router.include_router(
-    health.router,
-    prefix="/system",
-    tags=["v1 · System"],
-)
-v1_router.include_router(
-    ingestion.router,
-    prefix="/ingestion",
-    tags=["v1 · Data Ingestion"],
-)
-v1_router.include_router(
-    analytics.router,
-    prefix="/analytics",
-    tags=["v1 · Market Intelligence"],
-)
-
-app.include_router(v1_router)
-
-# ---------------------------------------------------------------------------
-# Root — API discovery endpoint
-# ---------------------------------------------------------------------------
-
-@app.get("/", include_in_schema=False)
-async def root() -> JSONResponse:
-    return JSONResponse(
-        {
-            "platform":    "Homara Atlas Intelligence API",
-            "version":     "1.0.0",
-            "status":      "operational",
-            "stable_api":  "/api/v1",
-            "docs":        "/docs",
-            "redoc":       "/redoc",
-            "endpoints": {
-                "health":         "/api/v1/system/health",
-                "overview":       "/api/v1/analytics/overview",
-                "price_index":    "/api/v1/analytics/price-index",
-                "neighbourhoods": "/api/v1/analytics/neighbourhoods",
-                "ingest_trigger": "/api/v1/ingestion/trigger/kenya-listings",
-            },
-        }
+def create_app() -> FastAPI:
+    production = os.getenv("ENVIRONMENT") == "production"
+    instance = FastAPI(
+        title=(
+            "Atlas API compatibility bridge"
+            if production
+            else "Atlas local demonstration API"
+        ),
+        version="2.0.0",
+        docs_url=None if production else "/docs",
+        redoc_url=None,
+        openapi_url=None if production else "/openapi.json",
+        debug=False,
     )
+    instance.add_middleware(
+        TrustedHostMiddleware,
+        allowed_hosts=os.getenv(
+            "ATLAS_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver"
+        ).split(","),
+    )
+    instance.add_middleware(
+        CORSMiddleware,
+        allow_origins=os.getenv(
+            "ATLAS_ALLOWED_ORIGINS", "http://localhost:5184,http://127.0.0.1:5184"
+        ).split(","),
+        allow_credentials=False,
+        allow_methods=["GET", "POST"] if not production else ["GET"],
+        allow_headers=["Content-Type"],
+    )
+
+    @instance.middleware("http")
+    async def headers(request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+    if production:
+        base = os.environ.get("NEON_FUNCTION_ATLAS_BASE_URL", "").rstrip("/")
+        parsed = urlparse(base)
+        if (
+            parsed.scheme != "https"
+            or not parsed.hostname
+            or not parsed.hostname.endswith(".neon.tech")
+            or parsed.username
+            or parsed.query
+            or parsed.fragment
+            or parsed.path
+        ):
+            raise RuntimeError(
+                "A valid NEON_FUNCTION_ATLAS_BASE_URL is required for the production bridge"
+            )
+        allowed = {
+            "system/health",
+            "system/ready",
+            "system/data-health",
+            "analytics/overview",
+            "analytics/price-index",
+            "analytics/neighbourhoods",
+            "analytics/market",
+            "sources",
+            "geography/counties",
+            "context/indicators",
+        }
+
+        @instance.get("/api/v1/{path:path}")
+        async def bridge(path: str, request: Request):
+            if path not in allowed:
+                raise HTTPException(
+                    status_code=404, detail="Use the canonical authenticated Neon API"
+                )
+            try:
+                async with httpx.AsyncClient(
+                    timeout=15, follow_redirects=False
+                ) as client:
+                    result = await client.get(
+                        f"{base}/api/v1/{path}", params=request.query_params
+                    )
+                return JSONResponse(result.json(), status_code=result.status_code)
+            except (httpx.HTTPError, ValueError):
+                raise HTTPException(
+                    status_code=503, detail="Atlas backend unavailable"
+                ) from None
+
+    else:
+        from app.routers import analytics, health, ingestion
+
+        instance.include_router(health.router, prefix="/api/v1/system")
+        instance.include_router(analytics.router, prefix="/api/v1/analytics")
+        instance.include_router(ingestion.router, prefix="/api/v1/ingestion")
+    return instance
+
+
+app = create_app()

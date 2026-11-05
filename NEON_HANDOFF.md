@@ -1,5 +1,7 @@
 # Homara Atlas — Neon setup handoff
 
+> Continued and superseded by [NEON_READINESS.md](NEON_READINESS.md). Current scope excludes AI and uses free-plan services.
+
 Updated: 2026-11-05 UTC. This is an incomplete setup, not a deployment report.
 
 ## User's authorized goal

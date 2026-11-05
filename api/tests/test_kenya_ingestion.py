@@ -4,7 +4,10 @@ Homara Atlas — Test Suite for Kenya Listings Ingestion Pipeline.
 
 import pytest
 import pandas as pd
-from app.ingestion.kenya_open_data import extract_kenya_listings, run_kenya_listings_ingestion
+from app.ingestion.kenya_open_data import (
+    extract_kenya_listings,
+    run_kenya_listings_ingestion,
+)
 
 
 def test_extract_returns_dataframe():

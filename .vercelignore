@@ -1,0 +1,13 @@
+.git
+.venv
+node_modules
+apps/web/node_modules
+.env*
+**/.env*
+*.local
+api
+archive
+data-platform
+infrastructure
+supabase
+.playwright-mcp

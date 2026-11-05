@@ -52,6 +52,7 @@ S3_BUCKET = os.getenv("S3_BUCKET", "homara-atlas-datalake-prod-us-east-1")
 # Step 1: EXTRACT — Simulate fetching public Kenyan property data
 # ---------------------------------------------------------------------------
 
+
 def extract_kenya_listings() -> pd.DataFrame:
     """
     Extracts public property listing data.
@@ -158,6 +159,7 @@ def extract_kenya_listings() -> pd.DataFrame:
 # Step 2: LOAD — Write raw Parquet to Data Lake (local or S3)
 # ---------------------------------------------------------------------------
 
+
 def load_to_data_lake(df: pd.DataFrame, job_id: str) -> str:
     """
     Loads the raw DataFrame as an immutable Parquet partition into the Data Lake.
@@ -200,6 +202,7 @@ def load_to_data_lake(df: pd.DataFrame, job_id: str) -> str:
 # ---------------------------------------------------------------------------
 # Pipeline Orchestrator
 # ---------------------------------------------------------------------------
+
 
 def run_kenya_listings_ingestion(job_id: str) -> dict:
     """

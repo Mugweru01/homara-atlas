@@ -50,7 +50,17 @@ export function RevenueChart({
   }));
 
   const ChartComponent = type === 'line' ? LineChart : type === 'bar' ? BarChart : AreaChart;
-  const DataComponent = type === 'line' ? Line : type === 'bar' ? Bar : Area;
+  const renderSeries = (comparison = false) => {
+    const props = {
+      dataKey: comparison ? 'previous_revenue' : 'total_revenue',
+      stroke: comparison ? '#94a3b8' : '#3b82f6',
+      fill: comparison ? '#94a3b8' : '#3b82f6',
+      name: comparison ? 'Previous Period' : 'Revenue',
+    };
+    if (type === 'bar') return <Bar {...props} />;
+    if (type === 'line') return <Line {...props} type="monotone" />;
+    return <Area {...props} type="monotone" fillOpacity={comparison ? 0.3 : 0.6} />;
+  };
 
   return (
     <Card>
@@ -83,32 +93,12 @@ export function RevenueChart({
                 }}
               />
               <Tooltip
-                formatter={(value: number) => [
-                  `KES ${value.toLocaleString()}`,
-                  'Revenue',
-                ]}
+                formatter={(value: number) => [`KES ${value.toLocaleString()}`, 'Revenue']}
                 labelFormatter={(label) => `Period: ${label}`}
               />
               <Legend />
-              <DataComponent
-                type="monotone"
-                dataKey="total_revenue"
-                stroke="#3b82f6"
-                fill="#3b82f6"
-                fillOpacity={type === 'area' ? 0.6 : 1}
-                name="Revenue"
-              />
-              {showComparison && comparisonData && (
-                <DataComponent
-                  type="monotone"
-                  dataKey="previous_revenue"
-                  stroke="#94a3b8"
-                  fill="#94a3b8"
-                  fillOpacity={type === 'area' ? 0.3 : 1}
-                  strokeDasharray="5 5"
-                  name="Previous Period"
-                />
-              )}
+              {renderSeries()}
+              {showComparison && comparisonData && renderSeries(true)}
             </ChartComponent>
           </ResponsiveContainer>
         )}
@@ -116,4 +106,3 @@ export function RevenueChart({
     </Card>
   );
 }
-
