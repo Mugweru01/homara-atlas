@@ -42,7 +42,9 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   handleRetry = () => {
-    this.setState({ hasError: false, error: undefined, errorInfo: undefined });
+    // A deployment can replace a lazy chunk while an older tab remains open.
+    // Reload the document so retry uses the current manifest, not a cached rejection.
+    window.location.reload();
   };
 
   handleGoHome = () => {
@@ -82,11 +84,11 @@ export class ErrorBoundary extends Component<Props, State> {
               <div className="flex gap-2">
                 <Button onClick={this.handleRetry} className="flex-1">
                   <RefreshCw className="w-4 h-4 mr-2" />
-                  Try Again
+                  Reload page
                 </Button>
                 <Button variant="outline" onClick={this.handleGoHome} className="flex-1">
                   <Home className="w-4 h-4 mr-2" />
-                  Go Home
+                  Go to overview
                 </Button>
               </div>
             </CardContent>

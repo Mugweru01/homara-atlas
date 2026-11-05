@@ -1,6 +1,6 @@
 import { defineConfig } from '@neon/config/v1';
 
-const origins=(process.env.ATLAS_ALLOWED_ORIGINS || 'http://localhost:5184,http://127.0.0.1:5184,http://localhost:8080,https://atlas.homara.co.ke,https://homara-atlas-i8styuatl-edwins-projects-f08b7343.vercel.app').split(',');
+const origins=(process.env.ATLAS_ALLOWED_ORIGINS || 'http://localhost:5184,http://127.0.0.1:5184,http://localhost:8080,https://atlas.homara.co.ke,https://homara-atlas.vercel.app,https://homara-atlas-i8styuatl-edwins-projects-f08b7343.vercel.app').split(',');
 export default defineConfig({
  preview:{realtime:{allowedOrigins:origins}},
  auth:true,

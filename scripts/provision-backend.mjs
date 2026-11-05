@@ -32,6 +32,6 @@ for(const [key,role] of [['ATLAS_API_DATABASE_URL','atlas_api_login'],['ATLAS_WO
 let existing='';try{existing=await readFile(output,'utf8');}catch{}
 for(const key of ['ATLAS_INTERNAL_TOKEN','ATLAS_RATE_LIMIT_SECRET'])values[key]=existing.match(new RegExp(`^${key}=(.+)$`,'m'))?.[1]||randomBytes(32).toString('hex');
 values.ATLAS_WORKER_BASE_URL=`https://${branch==='production'?'br-tiny-cake-bb448b4a':process.env.ATLAS_BRANCH_ID}-worker.compute.c-15.us-east-1.aws.neon.tech`;
-values.ATLAS_ALLOWED_ORIGINS='http://localhost:5184,http://127.0.0.1:5184,http://localhost:8080,https://atlas.homara.co.ke,https://homara-atlas-i8styuatl-edwins-projects-f08b7343.vercel.app';
+values.ATLAS_ALLOWED_ORIGINS='http://localhost:5184,http://127.0.0.1:5184,http://localhost:8080,https://atlas.homara.co.ke,https://homara-atlas.vercel.app,https://homara-atlas-i8styuatl-edwins-projects-f08b7343.vercel.app';
 await writeFile(output,Object.entries(values).map(([k,v])=>`${k}=${v}`).join('\n')+'\n',{mode:0o600});
 console.log(`Provisioned non-admin runtime roles on ${branch}; wrote ignored credentials to ${output}`);
