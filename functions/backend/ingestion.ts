@@ -1,5 +1,5 @@
 import { gzipSync } from 'node:zlib';
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash } from 'node:crypto';
 import type { Pool, PoolClient } from 'pg';
 import { transaction } from './db.js';
 import type { Storage } from './storage.js';

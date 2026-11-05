@@ -7,7 +7,7 @@ import { bodyLimit } from 'hono/body-limit';
 import { secureHeaders } from 'hono/secure-headers';
 import { HTTPException } from 'hono/http-exception';
 import { transaction } from './db.js';
-import { InputError, object, exact, text, httpsUrl, uuid, oneOf, pagination, hash } from './validation.js';
+import { InputError, object, exact, text, httpsUrl, uuid, oneOf, pagination } from './validation.js';
 import { rateLimit, type Principal } from './security.js';
 import { enqueue, type Source } from './ingestion.js';
 import type { Storage } from './storage.js';

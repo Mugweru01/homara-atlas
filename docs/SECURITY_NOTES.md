@@ -18,3 +18,11 @@ No force-push or history rewrite was performed. Rewriting shared history is a se
 Three historical JWT detections decode to Supabase's `anon` role; these were browser-facing public project keys, not the current Neon owner/runtime credentials. A fourth detection appears under a `SUPABASE_PUBLISHABLE_KEY` label in an old audit document. Their presence is not evidence that the retired deployment's authorisation configuration was safe; it simply distinguishes public client keys from the Redis token above.
 
 Current env files, encryption keys, local database files, scanner output and backup files remain ignored. Do not commit them when updating this project.
+
+## Code-scanning transition and importer review
+
+PR #40 consolidates duplicate CodeQL workflows. GitHub can report a missing configuration while comparing the new workflow set against the old `main` baseline, which still contains the retired duplicate scan. The surviving JavaScript analysis retains its earlier category; Python analysis is added. The removed configuration is not recreated merely to duplicate the same scan.
+
+CodeQL also identifies `scripts/import-listings.mjs` as a file-to-HTTP data flow. This is the importer’s intended operation: an operator explicitly chooses a JSON file and submits it to the configured Atlas endpoint with an operator JWT. The backend still validates source approval and record contents. Run the CLI only with a trusted backend URL; it is not an anonymous browser upload feature. The alert was not silently dismissed or broadly allowlisted.
+
+External security integrations may use different advisory databases or thresholds from `npm audit`. A successful high/critical npm audit does not mean every advisory or external check is clear.

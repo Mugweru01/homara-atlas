@@ -35,4 +35,4 @@ jobs:
           queries: +security-and-quality
       - uses: github/codeql-action/analyze@5895b2c9be147bc7f1c75ce72c5cb577febb1907 # v4
         with:
-          category: '/language:${{ matrix.language }}'
+          category: '/language:${{ matrix.language == ''javascript-typescript'' && ''javascript'' || matrix.language }}'
