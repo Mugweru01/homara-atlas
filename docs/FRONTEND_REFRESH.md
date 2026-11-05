@@ -40,3 +40,9 @@ The legacy service worker is retired, including an update worker for old install
 Review locally at `http://127.0.0.1:5184`. This refresh is included in PR #40. Backend deployment, Vercel preview status and promotion of a production frontend are separate from the Git push; inspect the PR checks/deployments for the current preview.
 
 The static county geometry is derived from the backend’s real source artifact. Its licence, publisher and reference vintage are recorded in `apps/web/public/kenya-counties.provenance.json`; refresh this asset deliberately if a later boundary release is adopted.
+
+## Production deployment
+
+Production is available at https://homara-atlas.vercel.app . The three public frontend URL variables are saved in Vercel Production, Preview and Development environments. The exact production origin is allowed by the API, Auth and Realtime configuration; no broad Vercel wildcard is enabled. Provider secrets remain on Neon.
+
+On 5 November 2026 the production browser check loaded 104 observations and 47 counties, then verified temporary-account registration/sign-in, report save, reload/session restoration, Realtime, download, confirmed deletion and sign-out. The temporary account was removed after testing. The fatal-error retry reloads the page so an older tab can recover if deployment replaces a lazy-loaded JavaScript chunk.

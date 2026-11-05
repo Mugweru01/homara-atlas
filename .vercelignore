@@ -5,6 +5,8 @@ apps/web/node_modules
 .env*
 **/.env*
 *.local
+*.local.mjs
+*.local.mts
 api
 archive
 data-platform

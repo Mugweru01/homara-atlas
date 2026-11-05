@@ -3,7 +3,7 @@
   <h1>Homara Atlas</h1>
   <p><strong>Kenya, with context.</strong></p>
   <p>A research workspace for Kenya’s geography, national indicators<br />and property market evidence.</p>
-  <p><a href="#explore-the-atlas">Explore the product</a> · <a href="#screenshots">Screenshots</a> · <a href="#run-it-locally">Get started</a> · <a href="docs/BACKEND_API.md">API contract</a></p>
+  <p><a href="https://homara-atlas.vercel.app">Open Atlas</a> · <a href="#explore-the-atlas">Explore the product</a> · <a href="#screenshots">Screenshots</a> · <a href="#run-it-locally">Get started</a> · <a href="docs/BACKEND_API.md">API contract</a></p>
 </div>
 
 ![Homara Atlas desktop overview, showing live dataset coverage, Kenya’s county map and annual national indicators](docs/screenshots/atlas-desktop-overview.png)
