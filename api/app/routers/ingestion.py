@@ -6,8 +6,9 @@ They do NOT serve market intelligence — that is handled by the analytics route
 """
 
 import asyncio
+import os
 from datetime import datetime
-from fastapi import APIRouter, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, HTTPException
 from fastapi.responses import JSONResponse
 
 from app.ingestion.kenya_open_data import run_kenya_listings_ingestion
@@ -21,13 +22,18 @@ async def trigger_kenya_listings(background_tasks: BackgroundTasks) -> JSONRespo
     Triggers the Kenya public property listings Extract & Load pipeline.
     The pipeline runs in the background and writes raw Parquet files to the Data Lake (S3/local).
     """
+    if os.getenv("ENVIRONMENT") == "production" or os.getenv("DATABASE_URL"):
+        raise HTTPException(
+            status_code=403,
+            detail="Synthetic ingestion is available only in local development.",
+        )
     job_id = f"kenya-listings-{datetime.utcnow().strftime('%Y%m%d-%H%M%S')}"
     background_tasks.add_task(run_kenya_listings_ingestion, job_id)
     return JSONResponse(
         {
             "job_id": job_id,
             "status": "STARTED",
-            "message": "Kenya listings ingestion pipeline triggered.",
+            "message": "Synthetic demonstration ingestion triggered; this is not verified market data.",
             "dataset": "kenya_public_property_listings",
         },
         status_code=202,

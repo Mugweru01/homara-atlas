@@ -1,0 +1,13 @@
+{
+  "dataset": "Kenya ADM1 simplified boundaries",
+  "publisher": "geoBoundaries / William and Mary geoLab",
+  "underlying_sources": ["RCMRD GeoPortal", "Africa GeoPortal"],
+  "reference_year": 2020,
+  "feature_count": 47,
+  "boundary_id": "KEN-ADM1-32016919",
+  "metadata_url": "https://www.geoboundaries.org/api/current/gbOpen/KEN/ADM1/",
+  "geoBoundaries_licence": "CC BY 4.0",
+  "underlying_metadata_licence": "Public Domain",
+  "retrieved_from": "Atlas private source artifact, 5 November 2026",
+  "notice": "Administrative context only. Not cadastral boundaries or current property-level geography."
+}

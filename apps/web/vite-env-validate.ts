@@ -1,47 +1,20 @@
-/**
- * Build-time environment variable validation
- * This script runs before the build to ensure all required environment variables are set
- */
+import { loadEnv } from 'vite';
 
-const requiredEnvVars = [
-  'VITE_SUPABASE_URL',
-  'VITE_SUPABASE_ANON_KEY',
-];
-
-const optionalEnvVars = [
-  'VITE_UPSTASH_REDIS_REST_URL',
-  'VITE_UPSTASH_REDIS_REST_TOKEN',
-];
-
-const missingVars: string[] = [];
-
-console.log('🔍 Validating environment variables...');
-
-// Check required variables
-requiredEnvVars.forEach(varName => {
-  if (!process.env[varName]) {
-    missingVars.push(varName);
+// The analytics dashboard uses /api on the same origin by default.
+// Supabase is legacy and has no consumers in the current application.
+const env = {
+  ...loadEnv(process.env.NODE_ENV || 'production', process.cwd(), 'VITE_'),
+  ...process.env,
+};
+for (const key of ['VITE_API_URL', 'VITE_NEON_AUTH_URL']) {
+  const value = env[key];
+  if (!value) continue;
+  try {
+    const url = new URL(value);
+    if (!['http:', 'https:'].includes(url.protocol)) throw new Error();
+  } catch {
+    console.error(`${key} must be an absolute HTTP(S) URL when configured.`);
+    process.exit(1);
   }
-});
-
-if (missingVars.length > 0) {
-  console.error('❌ Missing required environment variables:');
-  missingVars.forEach(varName => {
-    console.error(`   - ${varName}`);
-  });
-  console.error('\nPlease set these variables in your .env.local file or CI/CD secrets.');
-  process.exit(1);
 }
-
-console.log('✅ All required environment variables are set');
-
-// Log optional variables status
-optionalEnvVars.forEach(varName => {
-  if (process.env[varName]) {
-    console.log(`✅ ${varName} is set`);
-  } else {
-    console.log(`⚠️  ${varName} is not set (optional)`);
-  }
-});
-
-console.log('\n✨ Environment validation passed!');
+console.log('Frontend environment validation passed.');

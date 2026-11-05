@@ -35,6 +35,21 @@ _RAW_BASE = Path(__file__).resolve().parents[3] / "data-platform" / "raw"
 
 def _load_latest_parquet() -> pd.DataFrame:
     """Load the most recent Parquet partition from the local Data Lake."""
+    if get_db_type() == "postgresql":
+        conn = get_db_connection()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    SELECT listing_id, county, neighbourhood, property_type,
+                           listing_price_ksh, asking_rent_ksh, size_sqft, bedrooms
+                    FROM stg_kenya_listings
+                """)
+                return pd.DataFrame(
+                    cursor.fetchall(),
+                    columns=[column[0] for column in cursor.description],
+                )
+        finally:
+            conn.close()
     parquet_files = sorted(_RAW_BASE.rglob("*.parquet"))
     if not parquet_files:
         raise FileNotFoundError(
@@ -43,12 +58,15 @@ def _load_latest_parquet() -> pd.DataFrame:
         )
     # Load all partitions and concatenate (Redshift Spectrum does this automatically)
     dfs = [pd.read_parquet(f) for f in parquet_files]
-    return pd.concat(dfs, ignore_index=True)
+    return pd.concat(dfs, ignore_index=True).drop_duplicates(
+        subset=["listing_id"], keep="last"
+    )
 
 
 # ---------------------------------------------------------------------------
 # GET /api/v1/analytics/overview  — Dashboard summary KPIs
 # ---------------------------------------------------------------------------
+
 
 @router.get("/overview", summary="Market Overview KPIs")
 async def get_overview() -> JSONResponse:
@@ -57,7 +75,7 @@ async def get_overview() -> JSONResponse:
     Production: queries RDS PostgreSQL. Dev: reads local Parquet files.
     """
     try:
-        if ENVIRONMENT == "production":
+        if get_db_type() == "postgresql":
             conn = get_db_connection()
             cur = conn.cursor()
             cur.execute("""
@@ -70,35 +88,42 @@ async def get_overview() -> JSONResponse:
                 FROM stg_kenya_listings
             """)
             row = cur.fetchone()
-            cur.close(); conn.close()
-            return JSONResponse({
-                "status": "ok",
-                "total_listings": row[0],
-                "avg_listing_price_ksh": float(row[1] or 0),
-                "avg_rent_ksh": float(row[2] or 0),
-                "avg_price_per_sqft_ksh": float(row[4] or 0),
-                "counties_covered": row[3],
-                "currency": "KES",
-                "source": "rds_postgresql",
-            })
+            cur.close()
+            conn.close()
+            return JSONResponse(
+                {
+                    "status": "ok",
+                    "total_listings": row[0],
+                    "avg_listing_price_ksh": float(row[1] or 0),
+                    "avg_rent_ksh": float(row[2] or 0),
+                    "avg_price_per_sqft_ksh": float(row[4] or 0),
+                    "counties_covered": row[3],
+                    "currency": "KES",
+                    "source": "postgresql",
+                }
+            )
         else:
             df = _load_latest_parquet()
-            total_listings   = int(len(df))
-            avg_price        = round(float(df["listing_price_ksh"].mean()), 2)
-            avg_rent         = round(float(df["asking_rent_ksh"].mean()), 2)
+            total_listings = int(len(df))
+            avg_price = round(float(df["listing_price_ksh"].mean()), 2)
+            avg_rent = round(float(df["asking_rent_ksh"].mean()), 2)
             counties_covered = int(df["county"].nunique())
-            df["price_per_sqft"] = df["listing_price_ksh"] / df["size_sqft"].replace(0, pd.NA)
-            avg_price_per_sqft   = round(float(df["price_per_sqft"].mean()), 2)
-            return JSONResponse({
-                "status":               "ok",
-                "total_listings":       total_listings,
-                "avg_listing_price_ksh": avg_price,
-                "avg_rent_ksh":         avg_rent,
-                "avg_price_per_sqft_ksh": avg_price_per_sqft,
-                "counties_covered":     counties_covered,
-                "currency":             "KES",
-                "source":               "local_parquet",
-            })
+            df["price_per_sqft"] = df["listing_price_ksh"] / df["size_sqft"].replace(
+                0, pd.NA
+            )
+            avg_price_per_sqft = round(float(df["price_per_sqft"].mean()), 2)
+            return JSONResponse(
+                {
+                    "status": "ok",
+                    "total_listings": total_listings,
+                    "avg_listing_price_ksh": avg_price,
+                    "avg_rent_ksh": avg_rent,
+                    "avg_price_per_sqft_ksh": avg_price_per_sqft,
+                    "counties_covered": counties_covered,
+                    "currency": "KES",
+                    "source": "local_parquet",
+                }
+            )
     except FileNotFoundError as e:
         raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
@@ -109,6 +134,7 @@ async def get_overview() -> JSONResponse:
 # ---------------------------------------------------------------------------
 # GET /api/v1/analytics/price-index — Property Price Index by county
 # ---------------------------------------------------------------------------
+
 
 @router.get("/price-index", summary="Property Price Index by County")
 async def get_price_index(
@@ -142,11 +168,13 @@ async def get_price_index(
             .to_dict(orient="records")
         )
 
-        return JSONResponse({
-            "status":   "ok",
-            "filter":   {"county": county or "all"},
-            "results":  ppi,
-        })
+        return JSONResponse(
+            {
+                "status": "ok",
+                "filter": {"county": county or "all"},
+                "results": ppi,
+            }
+        )
 
     except FileNotFoundError as e:
         raise HTTPException(status_code=503, detail=str(e))
@@ -155,6 +183,7 @@ async def get_price_index(
 # ---------------------------------------------------------------------------
 # GET /api/v1/analytics/neighbourhoods — Neighbourhood intelligence
 # ---------------------------------------------------------------------------
+
 
 @router.get("/neighbourhoods", summary="Neighbourhood Intelligence")
 async def get_neighbourhoods(
@@ -184,11 +213,13 @@ async def get_neighbourhoods(
             .to_dict(orient="records")
         )
 
-        return JSONResponse({
-            "status":       "ok",
-            "total":        len(neighbourhoods),
-            "results":      neighbourhoods,
-        })
+        return JSONResponse(
+            {
+                "status": "ok",
+                "total": len(neighbourhoods),
+                "results": neighbourhoods,
+            }
+        )
 
     except FileNotFoundError as e:
         raise HTTPException(status_code=503, detail=str(e))

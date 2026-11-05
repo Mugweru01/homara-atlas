@@ -1,0 +1,1 @@
+throw new Error('The old latest-row importer is retired. Run the durable backend ingestion tests or submit observations through scripts/import-listings.mjs with an approved source and operator JWT.');

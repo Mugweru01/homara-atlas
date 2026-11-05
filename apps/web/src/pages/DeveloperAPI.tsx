@@ -1,40 +1,42 @@
-const DeveloperAPI = () => {
-  const API_BASE = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
-  
+﻿export default function DeveloperAPI() {
+  const base = import.meta.env.VITE_API_URL || window.location.origin;
   return (
-    <div className="space-y-6 animate-fade-in">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Property Intelligence API</h1>
-        <p className="text-gray-500 mt-1">Enable developers to build applications on top of Atlas data.</p>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-surface-1 rounded-2xl border border-border shadow-sm p-6 flex flex-col gap-4">
-          <h2 className="text-xl font-semibold">REST API Access</h2>
-          <p className="text-gray-600">
-            Homara Atlas provides a robust REST API for querying aggregated real estate metrics, price indices, and neighbourhood intelligence.
-          </p>
-          <a 
-            href={`${API_BASE}/docs`} 
-            target="_blank" 
-            rel="noreferrer"
-            className="mt-auto bg-primary hover:bg-primary-600 text-white px-4 py-2.5 rounded-xl font-medium transition-colors text-center shadow-sm"
-          >
-            View Swagger Documentation
-          </a>
-        </div>
-        
-        <div className="bg-surface-1 rounded-2xl border border-border shadow-sm p-6 flex flex-col gap-4">
-          <h2 className="text-xl font-semibold">Authentication</h2>
-          <p className="text-gray-600">
-            Public endpoints are available without authentication for the beta period. Enterprise datasets require an API key passed via the <code className="bg-gray-100 px-1.5 py-0.5 rounded text-sm font-mono text-gray-800">X-API-Key</code> header.
-          </p>
-          <button className="mt-auto border border-border hover:bg-gray-50 text-foreground px-4 py-2.5 rounded-xl font-medium transition-colors text-center">
-            Request API Key
-          </button>
-        </div>
-      </div>
+    <div className="space-y-6 max-w-3xl">
+      <h1 className="text-3xl font-bold">Property intelligence API</h1>
+      <p>
+        Public analytics are derived from the imported listings warehouse. An empty warehouse
+        returns zero coverage and empty result lists.
+      </p>
+      <ul className="space-y-3">
+        {[
+          '/api/v1/system/health',
+          '/api/v1/analytics/overview',
+          '/api/v1/analytics/price-index',
+          '/api/v1/analytics/neighbourhoods',
+        ].map((path) => (
+          <li key={path}>
+            <a
+              className="text-primary underline"
+              href={`${base}${path}`}
+              target="_blank"
+              rel="noreferrer"
+            >
+              GET {path}
+            </a>
+          </li>
+        ))}
+      </ul>
+      <h2 className="text-xl font-semibold">Private reports</h2>
+      <p>
+        Workspace routes require a signed-in user's bearer JWT from Neon Auth. Each report is scoped
+        to that user. Download links expire after 60 seconds.
+      </p>
+      <pre className="p-4 border rounded-xl overflow-auto">{`GET  /api/v1/workspace/reports\nPOST /api/v1/workspace/reports\nGET  /api/v1/workspace/reports/:id\nPOST /api/v1/workspace/reports/live`}</pre>
+      <p>
+        POST a report with a title (up to 120 characters) and plain text content (up to 10,000
+        characters). The live endpoint returns a short-lived sealed query; renew it through the same
+        authenticated route.
+      </p>
     </div>
   );
-};
-export default DeveloperAPI;
+}

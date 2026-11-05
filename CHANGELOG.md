@@ -1,6 +1,31 @@
 # Changelog
 
-All notable changes to the Homara Gatekeeper admin panel will be documented in this file.
+Current Homara Atlas changes are recorded first. Older entries below describe the legacy Gatekeeper interface and are historical, not a specification of the current Atlas product.
+
+## Unreleased — Atlas backend and research workspace — 2026-11-05
+
+### Added
+
+- Source approval, durable ingestion, fenced job leases, immutable observations, quality review and attributed raw evidence.
+- Separate API/worker database roles, owner-protected reports, private storage and sealed Realtime metadata.
+- Real World Bank national observations and geoBoundaries county geography; no invented property inventory.
+- A responsive Homara research interface with county exploration, national charts, search, CSV exports and private report workflows.
+- Detailed product/API/operations documentation, four desktop/mobile screenshots and encrypted restore verification.
+
+### Changed
+
+- Neon is the canonical backend. Historical Supabase, RDS and demo warehouse artifacts are not the current production pipeline.
+- Consolidated GitHub Actions into six focused workflows; removed obsolete deployments and duplicate scans.
+- Updated locked Node/Python dependencies, including the dependency upgrades covered by superseded PRs.
+- Operator imports require a trusted HTTPS origin and never follow redirects.
+
+### API versioning
+
+The canonical API uses `/api/v1`. Breaking public contracts require an explicit compatibility decision and a new major API prefix where appropriate; additive changes retain v1. Dataset methodology and publication releases are versioned separately from the HTTP API. No application release tag is implied by this unreleased entry.
+
+See `docs/BACKEND_API.md` and `docs/BACKEND_RUNBOOK.md` for the authoritative current contracts and limitations. Property feeds and off-device backup retention remain outstanding operational prerequisites.
+
+## Historical legacy entries
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).

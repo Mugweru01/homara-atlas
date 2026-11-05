@@ -1,51 +1,56 @@
-import { Suspense } from "react";
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import PriceIndex from "./pages/PriceIndex";
-import Neighbourhoods from "./pages/Neighbourhoods";
-import Affordability from "./pages/Affordability";
-import HeatMaps from "./pages/HeatMaps";
-import DeveloperAPI from "./pages/DeveloperAPI";
-import { DashboardLayout } from "./layouts/DashboardLayout";
-import { ErrorBoundary } from "./components/ErrorBoundary";
-
-const queryClient = new QueryClient();
-
-const App = () => (
-  <ErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
+import { lazy, Suspense } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { BrowserRouter, Routes, Route, Navigate, Link } from 'react-router-dom';
+import Shell from './atlas/Shell';
+import Overview from './atlas/Overview';
+import { Loading } from './atlas/primitives';
+import { ErrorBoundary } from './components/ErrorBoundary';
+const Context = lazy(() => import('./atlas/Context'));
+const Counties = lazy(() => import('./atlas/Counties'));
+const Market = lazy(() => import('./atlas/Market'));
+const Sources = lazy(() => import('./atlas/Sources'));
+const Workspace = lazy(() => import('./atlas/Workspace'));
+const Developer = lazy(() => import('./atlas/Developer'));
+const queryClient = new QueryClient({
+  defaultOptions: { queries: { staleTime: 5 * 60 * 1000, retry: 1, refetchOnWindowFocus: false } },
+});
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
         <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <Suspense fallback={
-            <div className="flex items-center justify-center min-h-screen">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-            </div>
-          }>
-            <ErrorBoundary>
-              <Routes>
-                <Route element={<DashboardLayout />}>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/price-index" element={<PriceIndex />} />
-                  <Route path="/neighbourhoods" element={<Neighbourhoods />} />
-                  <Route path="/affordability" element={<Affordability />} />
-                  <Route path="/heatmaps" element={<HeatMaps />} />
-                  <Route path="/api-docs" element={<DeveloperAPI />} />
-                  <Route path="*" element={<NotFound />} />
-                </Route>
-              </Routes>
-            </ErrorBoundary>
+          <Suspense fallback={<Loading label="Opening Atlas" />}>
+            <Routes>
+              <Route element={<Shell />}>
+                <Route index element={<Overview />} />
+                <Route path="context" element={<Context />} />
+                <Route path="counties" element={<Counties />} />
+                <Route path="market" element={<Market />} />
+                <Route path="sources" element={<Sources />} />
+                <Route path="workspace" element={<Workspace />} />
+                <Route path="api-docs" element={<Developer />} />
+                <Route path="heatmaps" element={<Navigate to="/counties" replace />} />
+                <Route path="neighbourhoods" element={<Navigate to="/counties" replace />} />
+                <Route path="price-index" element={<Navigate to="/market" replace />} />
+                <Route path="affordability" element={<Navigate to="/context" replace />} />
+                <Route
+                  path="*"
+                  element={
+                    <div className="not-found">
+                      <p className="eyebrow">Page not found</p>
+                      <h1>Let’s find your way back.</h1>
+                      <p>This page does not exist in the Atlas.</p>
+                      <Link className="button primary" to="/">
+                        Return to overview
+                      </Link>
+                    </div>
+                  }
+                />
+              </Route>
+            </Routes>
           </Suspense>
         </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
-  </ErrorBoundary>
-);
-
-export default App;
+      </QueryClientProvider>
+    </ErrorBoundary>
+  );
+}

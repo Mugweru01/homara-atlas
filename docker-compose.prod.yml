@@ -1,46 +1,32 @@
-version: '3.8'
-
 services:
   api:
     build:
       context: ./api
-      dockerfile: Dockerfile
     image: homara-atlas-api:latest
-    container_name: homara_atlas_api
     restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
-      - ENVIRONMENT=production
-      - LOG_LEVEL=info
-      # RDS PostgreSQL credentials (injected from GitHub Secrets at deploy time)
-      - DB_HOST=${DB_HOST}
-      - DB_USER=${DB_USER}
-      - DB_PASS=${DB_PASS}
-      - DB_NAME=homara_atlas_dw
-      - DB_PORT=5432
+      ENVIRONMENT: production
+      NEON_FUNCTION_ATLAS_BASE_URL: ${NEON_FUNCTION_ATLAS_BASE_URL:?Set the deployed Atlas API URL}
+      ATLAS_ALLOWED_HOSTS: ${ATLAS_ALLOWED_HOSTS:-localhost,127.0.0.1,api}
+      LOG_LEVEL: info
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/health"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/system/health', timeout=5)"]
       interval: 30s
       timeout: 10s
       retries: 3
-
   web:
     build:
       context: ./apps/web
-      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-}
+        VITE_NEON_AUTH_URL: ${VITE_NEON_AUTH_URL:-}
+        VITE_NEON_REALTIME_URL: ${VITE_NEON_REALTIME_URL:-}
     image: homara-atlas-web:latest
-    container_name: homara_atlas_web
     restart: unless-stopped
     ports:
       - "3000:3000"
-    environment:
-      - NODE_ENV=production
-      # Next.js / Vite build-time or runtime env vars for API URL
-      - VITE_API_BASE_URL=http://api:8000
     depends_on:
-      - api
-
-networks:
-  default:
-    name: homara_atlas_network
+      api:
+        condition: service_healthy

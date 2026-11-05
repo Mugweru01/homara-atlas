@@ -17,14 +17,22 @@ logger = logging.getLogger(__name__)
 
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 
+
 def get_db_connection():
     """
     Returns a database connection appropriate for the current environment.
     - Production: psycopg2 connection to AWS RDS PostgreSQL
     - Development: DuckDB connection to local warehouse file
     """
-    if ENVIRONMENT == "production":
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
         import psycopg2
+
+        # Prefer the branch's pooled URL. Never log connection credentials.
+        return psycopg2.connect(database_url, sslmode="require", connect_timeout=10)
+    if os.getenv("ENVIRONMENT", "development") == "production":
+        import psycopg2
+
         db_host = os.environ["DB_HOST"]
         db_user = os.environ["DB_USER"]
         db_pass = os.environ["DB_PASS"]
@@ -44,11 +52,19 @@ def get_db_connection():
         return conn
     else:
         import duckdb
-        db_path = os.getenv("DUCKDB_PATH", "data-platform/warehouse/homara_atlas.duckdb")
+
+        db_path = os.getenv(
+            "DUCKDB_PATH", "data-platform/warehouse/homara_atlas.duckdb"
+        )
         logger.info(f"Connecting to local DuckDB at {db_path}")
         return duckdb.connect(db_path)
 
 
 def get_db_type() -> str:
     """Returns the type of database currently in use."""
-    return "postgresql" if ENVIRONMENT == "production" else "duckdb"
+    return (
+        "postgresql"
+        if os.getenv("DATABASE_URL")
+        or os.getenv("ENVIRONMENT", "development") == "production"
+        else "duckdb"
+    )
