@@ -48,6 +48,8 @@ Submit an approved manual feed with `ATLAS_OPERATOR_TOKEN` and `NEON_FUNCTION_AT
 
 Quarantine acknowledgment records review, not acceptance. Correct records in a new batch. Admin entity matching requires an explicit review reason and is reversible with an audited unmatch; no fuzzy automatic merge occurs. Raw manual replay reuses the exact stored artifact; automatic replay fetches the current upstream release.
 
+The manual-import CLI defaults to the production Atlas origin and rejects HTTP, URL credentials, query strings, fragments and unexpected hosts before reading the chosen file. To import into a deliberately trusted isolated branch, set `ATLAS_IMPORT_ALLOWED_ORIGIN` to that branch's exact HTTPS origin as well as its API URL. Redirects remain disabled. Never set this override from an untrusted feed or document.
+
 ## Security and capacity
 
 JWT verification requires the configured issuer, EdDSA signature, subject and expiry. Reports use both owner predicates and database RLS; private downloads expire after 60 seconds. Creation reserves a pending row before upload, and failed/deleted uploads enter a durable deletion outbox. Pending uploads older than one hour are swept. A user may retain at most 100 reports.
