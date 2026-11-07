@@ -72,7 +72,7 @@ Public coverage updated on **7 November 2026**:
 | Kenya national context | **104 annual observations**, four indicators, available years from 2000 onward | World Bank, World Development Indicators; CC BY 4.0 | Daily |
 | County geography | **47 county boundaries**, reference vintage **2020** | geoBoundaries; underlying metadata identifies Public Domain sources from RCMRD/Africa GeoPortal; attribution retained | Weekly |
 | Location reference | **47 counties, 290 constituencies, 1,450 wards, 302 historical sub-counties, 917 localities and 1,829 areas** | [kenya-locations](https://github.com/davidamunga/kenya-locations), by **David Amunga and contributors**; data CC BY 4.0; IEBC/KNBS and historical HDX/American Red Cross credit retained | Pinned, reviewed imports |
-| Published market benchmarks | **21 national and reported county rent, sale and short-let figures**, October 2026; reference months retained | [Kenya Property Centre published market statistics](https://kenyapropertycentre.com/market-trends/average-prices), CC BY 4.0 under its [market-data reuse terms](https://kenyapropertycentre.com/terms-of-use); individual listing content excluded | Checked daily; publisher releases monthly |
+| Published market benchmarks | **21 national and reported county rent, sale and short-let figures**, October 2026; reference months retained | [Kenya Property Centre published market statistics](https://kenyapropertycentre.com/market-trends/average-prices), CC BY 4.0 under its [market-data reuse terms](https://kenyapropertycentre.com/terms-of-use); individual listing content excluded | Automated refresh paused after provider HTTP 403; monthly publisher figures |
 | Public property observations | **No public listing inventory** | Publication requires explicit rights and sufficient evidence; confidential inputs are excluded | Feed dependent |
 
 The four national series are total population, urban population share, consumer price inflation and GDP per capita in current US dollars. **GDP per capita is not household income.** County boundaries are administrative context, not cadastral surveys or property coordinates.
@@ -205,6 +205,11 @@ The repository keeps **six focused workflows**:
 | [Frontend CI](.github/workflows/ci-frontend.yml) | TypeScript, lint, tests, production build and high/critical dependency audit |
 | [Backend/database contracts](.github/workflows/backend-database.yml) | PostgreSQL 18 migrations, repeatability, actual runtime-role permissions, jobs, publication and backend audit |
 | [Daily licensed market collection](.github/workflows/daily-market-collection.yml) | Robots/terms checks and permitted statistics at 06:00 Nairobi; one source-scoped token, no database or confidential-feed credentials |
+
+The market collector workflow is currently **disabled**: both Neon and GitHub
+networks received HTTP 403. The source is paused and the denied run is recorded
+in collection status. Daily refresh needs an approved access route or another
+permitted feed. See [the operational record](docs/DAILY_COLLECTION.md).
 | [Python API CI](.github/workflows/ci-backend.yml) | Locked dependencies, syntax checks, formatting and compatibility API tests |
 | [Secret scanning](.github/workflows/gitleaks.yml) | Prevent accidental credential commits |
 | [Dependency review](.github/workflows/dependency-review.yml) | Review dependency changes for high/critical vulnerabilities |

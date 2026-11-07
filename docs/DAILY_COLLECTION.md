@@ -2,6 +2,15 @@
 
 ## Current boundaries
 
+**Operational status, 7 November 2026:** the GitHub runner also received HTTP 403
+([run evidence](https://github.com/Mugweru01/homara-atlas/actions/runs/42408145568)).
+The daily workflow is disabled and the source is paused indefinitely; no further
+automated requests are made. Its blocked job and access reason are visible in
+Atlas. Previously collected licensed statistics remain published. Daily refresh
+is prepared but **not operational**. Obtain an approved access route or choose a
+different permitted feed before clearing the source pause and re-enabling the
+workflow. Do not retry through proxies, change identity or bypass a challenge.
+
 **Homara remains completely hidden**, including from a staff-facing property
 console. Its confidential observations are not exposed by the new listings,
 geography, collection-status or benchmark endpoints. No change enables public
@@ -20,7 +29,7 @@ are used to fill the interface.
 | [BuyRentKenya](https://www.buyrentkenya.com/legal) | Written consent required for mining/scraping content for another website | Disabled |
 | [Property24 Kenya](https://www.property24.co.ke/terms-and-conditions) | Automated monitoring/copying and unpermitted republication prohibited | Disabled |
 | [Hauzisha](https://hauzisha.co.ke/terms-of-use/) | Listing crawling and republication on another property site prohibited | Disabled |
-| [Kenya Property Centre](https://kenyapropertycentre.com/terms-of-use) | Published **market statistics** licensed CC BY 4.0, with reasonable robots-compliant automated access expressly permitted. Individual listings, photos and descriptions excluded. | Daily statistics collector; not individual inventory |
+| [Kenya Property Centre](https://kenyapropertycentre.com/terms-of-use) | Published **market statistics** licensed CC BY 4.0, with reasonable robots-compliant automated access expressly permitted. Individual listings, photos and descriptions excluded. | Paused after cloud HTTP 403; approved access route needed |
 
 Public review decisions and approved collector health are visible on
 `/listings` and through GET `/api/v1/collection/sources`. Confidential feeds,
@@ -56,7 +65,7 @@ Activate only the licensed statistics source through the owner workflow:
 node --env-file=.env.local scripts/register-market-collector.mjs --activate
 ```
 
-This source refreshes daily through the existing worker. Its licence check,
+This source has a prepared daily schedule (currently paused). Its licence check,
 schema check or robots failure blocks collection rather than silently publishing
 unverified values.
 

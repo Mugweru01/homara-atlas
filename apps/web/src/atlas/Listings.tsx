@@ -182,7 +182,9 @@ export default function Listings() {
                 <span>
                   {c.data_kind === 'context' ? 'Published statistics' : 'Public listing collection'}{' '}
                   · Last successful collection: {date(c.last_success_at)} ·{' '}
-                  {c.last_job_status || 'Awaiting first run'}
+                  {c.last_job_status === 'blocked' && c.error_code === 'upstream_http_403'
+                    ? 'Paused: provider denied automated access (HTTP 403)'
+                    : c.last_job_status || 'Awaiting first run'}
                   {c.pending_pages ? ` · ${c.pending_pages} pages queued` : ''}
                   {c.accepted_count !== null
                     ? ` · ${c.accepted_count} new records · ${c.duplicate_count || 0} repeated · ${c.rejected_count || 0} quarantined`

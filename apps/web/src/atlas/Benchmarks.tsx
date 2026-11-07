@@ -34,7 +34,7 @@ export default function Benchmarks() {
     <section className="publisher-benchmarks">
       <SectionTitle
         title="Published market benchmarks"
-        detail="Monthly figures from Kenya Property Centre, checked daily. These are publisher statistics, separate from individual listings and Atlas estimates."
+        detail="Monthly figures from Kenya Property Centre. See Property listings for refresh availability and collection status. These are publisher statistics, separate from individual listings and Atlas estimates."
       />
       <div className="filter-bar">
         <label className="select-label">

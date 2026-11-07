@@ -9,7 +9,7 @@ export function registerSourcePush(app:Hono<{Variables:Variables}>,d:Dependencie
  const base='/api/v1/collector/kpc';
  const auth:MiddlewareHandler<{Variables:Variables}>=async(c,next)=>{if(!hasInternalToken(c.req.header('Authorization'),d.collectorToken||''))throw new HTTPException(401,{message:'unauthorized'});await rateLimit(d.pool,d.rateSecret,'kpc-source-push',30);await next();};
  app.use(base,auth);app.use(base+'/*',auth);
- const source=async()=>{const s=(await d.pool.query("SELECT id FROM atlas_control.sources WHERE slug='kpc-market-statistics' AND driver='kpc_market' AND collection_transport='source_push' AND status='active' AND publication_allowed AND (rights_expire_at IS NULL OR rights_expire_at>now())")).rows[0];if(!s)throw new HTTPException(409,{message:'source_not_approved'});return s.id as string;};
+ const source=async()=>{const s=(await d.pool.query("SELECT id FROM atlas_control.sources WHERE slug='kpc-market-statistics' AND driver='kpc_market' AND collection_transport='source_push' AND status='active' AND publication_allowed AND (rights_expire_at IS NULL OR rights_expire_at>now()) AND (not_before_at IS NULL OR not_before_at<=now())")).rows[0];if(!s)throw new HTTPException(409,{message:'source_not_approved_or_paused'});return s.id as string;};
  app.post(base,async c=>{
   const id=await source(),value=validateKpcEnvelope(await c.req.json());
   const digest=hash(value);
