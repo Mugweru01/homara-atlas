@@ -53,7 +53,9 @@ export function listing(value: unknown, now = Date.now()) {
   return {
     source_listing_id: text(v.source_listing_id,160)!, source_url: httpsUrl(v.source_url), observed_at: observed, source_updated_at: updated,
     listing_type: type, property_type: oneOf(v.property_type, ['apartment','house','land','office','retail','warehouse']),
-    county_id: uuid(String(v.county_id)), neighbourhood: text(v.neighbourhood,120,false), bedrooms, bathrooms,
+    county_id: uuid(String(v.county_id)), neighbourhood: text(v.neighbourhood,120,false), bedrooms,
+    // Preserve hashes of pre-bathroom observations when replaying legacy evidence.
+    ...(bathrooms!==null?{bathrooms}:{}),
     price_amount: number(v.price_amount,1e12)!, currency: oneOf(v.currency,['KES']), rent_period: rentPeriod,
     floor_area_sqm: number(v.floor_area_sqm,1e7,false), plot_area_sqm: number(v.plot_area_sqm,1e9,false), availability, status_evidence: evidence,
   };

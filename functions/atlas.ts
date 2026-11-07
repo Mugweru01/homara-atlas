@@ -11,6 +11,7 @@ if(new URL(process.env.DATABASE_URL!).username!=='atlas_api_login')throw new Err
 const realtime=createRealtime({secret:process.env.NEON_REALTIME_SECRET!,db:new URL(apiUrl).pathname.slice(1)});
 const origins=(process.env.ATLAS_ALLOWED_ORIGINS||'https://atlas.homara.co.ke').split(',');
 export default createApp({
+ collectorToken:process.env.ATLAS_KPC_COLLECTOR_TOKEN,
  pool:createPool(apiUrl),storage:createStorage(),rateSecret:process.env.ATLAS_RATE_LIMIT_SECRET!,origins,
  verify:tokenVerifier(process.env.NEON_AUTH_BASE_URL!,process.env.NEON_AUTH_JWKS_URL!),
  // Realtime is a sealed capability; owner is fixed by the verified JWT, never request input.

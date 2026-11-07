@@ -23,6 +23,8 @@ Atlas is part of [Homara](https://homara.co.ke). It is being built for people re
 | **Overview** | See dataset coverage, collection status, Kenya’s county boundaries and switchable national signals. |
 | **National context** | Explore population, urbanisation, consumer price inflation and GDP per capita; choose a time range, inspect observations and export CSV. |
 | **County explorer** | Search the county directory, select a boundary on the map and open a shareable county view with its geographic reference year. |
+| **Locations** | Explore 4,835 places at six levels, filter by eight former provinces and county, inspect parents and export the current page. |
+| **Property listings** | Inspect separately approved public advertisements and collection permissions; confidential Homara listings remain hidden. |
 | **Property market** | Filter by county and sale/rent population. View asking statistics when evidence exists; understand why a missing or sparse estimate is withheld. |
 | **Data sources** | Inspect collection dates, licences, attribution, refresh schedules and the limits of each dataset. |
 | **Your workspace** | Create an account, write private reports, receive live updates, download your notes and delete reports with confirmation. |
@@ -31,6 +33,17 @@ Atlas is part of [Homara](https://homara.co.ke). It is being built for people re
 Search pages and counties with **Ctrl/Cmd + K**. The interface supports desktop and mobile layouts, keyboard navigation, visible focus states and reduced-motion preferences. No emojis or fabricated market figures are used in the rebuilt interface.
 
 ## Screenshots
+
+### Full location reference, desktop and mobile
+
+Captured **7 November 2026**, against the live API. The Coast filter shows its six
+counties; every imported level remains accessible through the level controls.
+
+![Desktop location explorer with all six reference levels and the Coast region selected](docs/screenshots/atlas-desktop-locations.png)
+
+<div align="center">
+  <img src="docs/screenshots/atlas-mobile-locations.png" width="280" alt="Mobile location explorer with region and county filters, source credits and paginated results" />
+</div>
 
 These are actual screenshots of the rebuilt application connected to the Atlas backend, captured on **5 November 2026**. They are not design mockups. Dataset totals and collection dates can change after capture.
 
@@ -59,6 +72,7 @@ Public coverage updated on **7 November 2026**:
 | Kenya national context | **104 annual observations**, four indicators, available years from 2000 onward | World Bank, World Development Indicators; CC BY 4.0 | Daily |
 | County geography | **47 county boundaries**, reference vintage **2020** | geoBoundaries; underlying metadata identifies Public Domain sources from RCMRD/Africa GeoPortal; attribution retained | Weekly |
 | Location reference | **47 counties, 290 constituencies, 1,450 wards, 302 historical sub-counties, 917 localities and 1,829 areas** | [kenya-locations](https://github.com/davidamunga/kenya-locations), by **David Amunga and contributors**; data CC BY 4.0; IEBC/KNBS and historical HDX/American Red Cross credit retained | Pinned, reviewed imports |
+| Published market benchmarks | **21 national and reported county rent, sale and short-let figures**, October 2026; reference months retained | [Kenya Property Centre published market statistics](https://kenyapropertycentre.com/market-trends/average-prices), CC BY 4.0 under its [market-data reuse terms](https://kenyapropertycentre.com/terms-of-use); individual listing content excluded | Checked daily; publisher releases monthly |
 | Public property observations | **No public listing inventory** | Publication requires explicit rights and sufficient evidence; confidential inputs are excluded | Feed dependent |
 
 The four national series are total population, urban population share, consumer price inflation and GDP per capita in current US dollars. **GDP per capita is not household income.** County boundaries are administrative context, not cadastral surveys or property coordinates.
@@ -68,6 +82,8 @@ Atlas stores source attribution, retrieval history and checksum-addressed raw ar
 Source documentation: [World Bank WDI](https://datacatalog.worldbank.org/search/dataset/0037712/world-development-indicators), [World Bank public licences](https://datacatalog.worldbank.org/public-licenses), [geoBoundaries Kenya ADM1 metadata](https://www.geoboundaries.org/api/current/gbOpen/KEN/ADM1/). Map-asset attribution is also recorded in [the bundled provenance file](apps/web/public/kenya-counties.provenance.json).
 
 Location reference data comes from [kenya-locations, by David Amunga and contributors](https://github.com/davidamunga/kenya-locations/tree/6c837b48a29ea2424ecda2abaea2ae6d3670db68), pinned at version **0.12.0**. Its [CC BY 4.0 data licence](data-platform/reference/kenya-locations/LICENSE.md), checksums and source metadata are retained. Electoral reference is IEBC 2012; sub-counties are historical DHIS2 data, with some inferred ward links. Informal-place provenance and coverage are incomplete. These are place references, not property coordinates or map polygons. See the [location API and operations guide](docs/LOCATION_REFERENCE.md).
+
+The **Locations** explorer exposes all imported levels and eight historical province groups, with filters, search, parents, dated county metadata and page exports. The **Property listings** page contains only separately approved public inventory and shows collection/permission status. **Property market** separates publisher-reported benchmarks from Atlas-derived estimates. Confidential feeds never fill public cards or figures. The [daily collection runbook](docs/DAILY_COLLECTION.md) documents source restrictions, bounded/resumable crawls, retries, URL/ID duplicate controls and their practical limits; no third-party uptime or universal cross-site duplicate guarantee is claimed.
 
 ### How property statistics become publishable
 
@@ -188,6 +204,7 @@ The repository keeps **six focused workflows**:
 | --- | --- |
 | [Frontend CI](.github/workflows/ci-frontend.yml) | TypeScript, lint, tests, production build and high/critical dependency audit |
 | [Backend/database contracts](.github/workflows/backend-database.yml) | PostgreSQL 18 migrations, repeatability, actual runtime-role permissions, jobs, publication and backend audit |
+| [Daily licensed market collection](.github/workflows/daily-market-collection.yml) | Robots/terms checks and permitted statistics at 06:00 Nairobi; one source-scoped token, no database or confidential-feed credentials |
 | [Python API CI](.github/workflows/ci-backend.yml) | Locked dependencies, syntax checks, formatting and compatibility API tests |
 | [Secret scanning](.github/workflows/gitleaks.yml) | Prevent accidental credential commits |
 | [Dependency review](.github/workflows/dependency-review.yml) | Review dependency changes for high/critical vulnerabilities |
@@ -207,7 +224,7 @@ npm run check:functions
 
 Database tests need an explicitly isolated environment. The [database workflow](.github/workflows/backend-database.yml) is an executable reference for the local PostgreSQL setup; do not aim these tests at production. Python tests run from `api` after installing `requirements.txt`.
 
-The current backend suite has **29 passing tests**, including geography validation, publication permissions and confidentiality checks. The location milestone also passed **three frontend environment tests**, both TypeScript checks, a production build and live API/source-credit checks. Earlier milestones verified nine Python tests, live Auth/report/Realtime flows, encrypted restore and desktop/mobile layouts. Frontend lint retains seven existing Fast Refresh warnings; scoped formatting passes for changed files, while the full formatting check flags existing differences in untouched files. Lower-severity frontend dependency advisories remain and are not represented as resolved.
+The current backend suite has **39 passing tests**, including collector authentication, geography validation, URL/ID duplicate protection, publication permissions and confidentiality checks. This milestone also passed **three frontend environment tests**, both TypeScript checks, a production build and live API/source-credit checks. The live licensed benchmark import was replayed: zero new rows and 21 unchanged duplicates. Earlier milestones verified nine Python tests, live Auth/report/Realtime flows, encrypted restore and desktop/mobile layouts. Frontend lint retains seven existing Fast Refresh warnings; scoped formatting passes for changed files, while the full formatting check flags existing differences in untouched files. Lower-severity frontend dependency advisories remain and are not represented as resolved.
 
 ## Security, recovery and practical limits
 

@@ -108,6 +108,11 @@ name/kind/UUID ordering and a `has_more` flag. Search is literal and
 case-insensitive, including county aliases. It does not automatically assign a
 property to a place or perform fuzzy geocoding.
 
+`/geography/regions` returns the eight former-province groupings and their county
+reference counts. List/search endpoints also accept `region` with one of those
+names. `/locations` exposes every imported level, region/county filters, search,
+pagination, metadata, explicit parents and page-scoped exports with attribution.
+
 Example, using your actual Atlas Function origin:
 
 ```sh
@@ -229,7 +234,7 @@ malformed/repeated queries, read-only methods, CORS/security headers, source
 revocation and rate limits with spoofed forwarding headers. Existing Homara,
 JWT, report ownership, durable job and publication tests remain required.
 
-Verified on **7 November 2026**: 29 backend tests and three frontend environment
+Verified on **7 November 2026**: 39 backend tests and three frontend environment
 tests passed, both TypeScript checks passed, and the production build succeeded.
 Production import and repeat-import checks passed; all 47 county UUIDs were
 preserved. Live API checks covered attribution/licence, the Tharaka crosswalk,

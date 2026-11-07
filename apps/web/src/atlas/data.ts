@@ -1,6 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
 
-export type County = { id: string; name: string; reference_year: number };
+export type County = {
+  id: string;
+  name: string;
+  reference_year: number;
+  code?: string;
+  reference_name?: string;
+  metadata?: {
+    region?: string;
+    capital?: string;
+    population_2019?: number;
+    area_km2?: number;
+    capital_postal_code?: string;
+    aliases?: string[];
+  };
+};
 export type Indicator = {
   indicator_code: string;
   indicator_name: string;

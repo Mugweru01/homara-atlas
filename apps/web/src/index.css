@@ -3135,3 +3135,212 @@ code,
 pre {
   font-family: 'Spline Sans Mono', monospace;
 }
+
+.location-levels {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 1px;
+  background: var(--gray-200);
+  border: 1px solid var(--gray-200);
+  margin-bottom: 24px;
+}
+.location-levels button {
+  text-align: left;
+  padding: 22px 16px;
+  background: var(--cream, #faf8f2);
+  color: var(--gray-600);
+}
+.location-levels button[aria-pressed='true'] {
+  background: #0e4a34;
+  color: white;
+}
+.location-levels strong {
+  display: block;
+  font-size: 27px;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  line-height: 1.3;
+}
+.location-levels span {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+}
+.location-filters {
+  flex-wrap: wrap;
+}
+.location-filters .search-field {
+  flex: 1;
+  min-width: 240px;
+}
+.location-results {
+  background: white;
+  padding: 24px;
+  border: 1px solid var(--gray-200);
+}
+.location-results table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.location-results th {
+  padding: 12px;
+  font-size: 11px;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--gray-200);
+}
+.location-results td {
+  padding: 16px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--gray-200);
+}
+.location-results .text-link {
+  white-space: normal;
+  text-align: left;
+}
+.location-detail {
+  padding: 28px;
+  background: white;
+  border: 1px solid var(--gray-200);
+  margin: 24px 0;
+}
+.location-detail .detail-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.location-parents {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 16px 0 24px;
+}
+@media (max-width: 1000px) {
+  .location-levels {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+@media (max-width: 700px) {
+  .location-levels {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .location-levels button {
+    padding: 16px;
+  }
+  .location-results,
+  .location-detail {
+    padding: 16px;
+  }
+  .location-results table {
+    min-width: 680px;
+  }
+  .location-detail .detail-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+.publisher-benchmarks,
+.collection-sources {
+  margin: 24px 0 40px;
+  padding: 24px;
+  background: white;
+  border: 1px solid var(--gray-200);
+}
+.publisher-benchmarks table,
+.collection-sources table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+.publisher-benchmarks th,
+.collection-sources th {
+  padding: 12px;
+  text-transform: uppercase;
+  font-size: 11px;
+  color: var(--gray-500);
+  border-bottom: 1px solid var(--gray-200);
+}
+.publisher-benchmarks td,
+.collection-sources td {
+  padding: 14px 12px;
+  font-size: 13px;
+  border-bottom: 1px solid var(--gray-200);
+}
+.benchmark-methodology {
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--gray-500);
+}
+.benchmark-methodology summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: #0e4a34;
+}
+.benchmark-methodology p {
+  margin-top: 10px;
+  line-height: 1.7;
+}
+.atlas-estimates-heading {
+  margin: 32px 0 20px;
+  font-size: 24px;
+}
+.public-listing-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+}
+.public-listing,
+.listing-empty {
+  background: white;
+  border: 1px solid var(--gray-200);
+  padding: 28px;
+}
+.public-listing h2 {
+  margin: 18px 0;
+  font-size: 25px;
+}
+.listing-price {
+  display: block;
+  font-size: 22px;
+  color: #0e4a34;
+  margin-bottom: 14px;
+}
+.public-listing p,
+.listing-empty p {
+  line-height: 1.7;
+  margin: 14px 0;
+}
+.listing-empty h2 {
+  font-size: 30px;
+  max-width: 650px;
+}
+.listing-empty p {
+  max-width: 720px;
+}
+.collector-status {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px 0;
+  border-top: 1px solid var(--gray-200);
+  font-size: 13px;
+}
+@media (max-width: 700px) {
+  .public-listing-grid {
+    grid-template-columns: 1fr;
+  }
+  .publisher-benchmarks,
+  .collection-sources {
+    padding: 16px;
+  }
+  .publisher-benchmarks table {
+    min-width: 700px;
+  }
+  .collection-sources table {
+    min-width: 650px;
+  }
+  .public-listing,
+  .listing-empty {
+    padding: 20px;
+  }
+}

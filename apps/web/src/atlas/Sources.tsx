@@ -24,7 +24,9 @@ export default function Sources() {
         ? 'World Bank'
         : s.slug === 'kenya-locations'
           ? 'kenya-locations'
-          : s.name;
+          : s.slug === 'kpc-market-statistics'
+            ? 'Kenya Property Centre'
+            : s.name;
   return (
     <>
       <PageHeading
@@ -86,11 +88,13 @@ export default function Sources() {
                         <small>
                           {s.slug === 'kenya-locations'
                             ? 'David Amunga and contributors'
-                            : s.data_kind === 'geography'
-                              ? 'Administrative boundaries'
-                              : s.data_kind === 'context'
-                                ? 'World Development Indicators'
-                                : 'Approved listing feed'}
+                            : s.slug === 'kpc-market-statistics'
+                              ? 'Published market benchmarks'
+                              : s.data_kind === 'geography'
+                                ? 'Administrative boundaries'
+                                : s.data_kind === 'context'
+                                  ? 'World Development Indicators'
+                                  : 'Approved listing feed'}
                         </small>
                       </span>
                     </button>
@@ -98,11 +102,13 @@ export default function Sources() {
                   <td>
                     {s.slug === 'kenya-locations'
                       ? 'Counties, wards and place names'
-                      : s.data_kind === 'geography'
-                        ? 'Kenya counties'
-                        : s.data_kind === 'context'
-                          ? 'Kenya national context'
-                          : 'Property listings'}
+                      : s.slug === 'kpc-market-statistics'
+                        ? 'Monthly rent, sale and short-let statistics'
+                        : s.data_kind === 'geography'
+                          ? 'Kenya counties'
+                          : s.data_kind === 'context'
+                            ? 'Kenya national context'
+                            : 'Property listings'}
                   </td>
                   <td>{date(s.last_success_at)}</td>
                   <td>
@@ -219,11 +225,13 @@ export default function Sources() {
                   <dd>
                     {source.slug === 'kenya-locations'
                       ? 'Reviewed, versioned imports'
-                      : source.data_kind === 'geography'
-                        ? 'Weekly'
-                        : source.data_kind === 'context'
-                          ? 'Daily'
-                          : 'Operator submitted'}
+                      : source.slug === 'kpc-market-statistics'
+                        ? 'Daily collection; publisher releases monthly'
+                        : source.data_kind === 'geography'
+                          ? 'Weekly'
+                          : source.data_kind === 'context'
+                            ? 'Daily'
+                            : 'Operator submitted'}
                   </dd>
                 </div>
                 <div>
@@ -241,6 +249,13 @@ export default function Sources() {
               </dl>
               <h3>Attribution</h3>
               <p>{source.attribution}</p>
+              {source.slug === 'kpc-market-statistics' && (
+                <p className="provenance">
+                  The publisher licenses its market statistics under CC BY 4.0. This permission
+                  excludes individual advertisements, photos and descriptions. Collection dates do
+                  not change the reference month or make these figures completed transactions.
+                </p>
+              )}
               {source.slug === 'kenya-locations' && (
                 <p className="provenance">
                   Electoral reference: IEBC 2012. Sub-counties use historical HDX/DHIS2 data; some

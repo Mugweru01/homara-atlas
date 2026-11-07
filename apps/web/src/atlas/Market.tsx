@@ -4,6 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Building2, ArrowRight, Check, LockKeyhole, Info } from 'lucide-react';
 import { api, useCounties, useSources, type MarketCell, exportCsv } from './data';
 import { PageHeading, Status, ErrorState, Loading, ExportButton } from './primitives';
+import Benchmarks from './Benchmarks';
 
 export default function Market() {
   const counties = useCounties(),
@@ -37,6 +38,8 @@ export default function Market() {
               : 'Checking source coverage'}
         </Status>
       </PageHeading>
+      <Benchmarks />
+      <h2 className="atlas-estimates-heading">Atlas-derived asking statistics</h2>
       <div className="filter-bar">
         <div className="segmented" role="group" aria-label="Listing type">
           <button

@@ -11,6 +11,8 @@ const Market = lazy(() => import('./atlas/Market'));
 const Sources = lazy(() => import('./atlas/Sources'));
 const Workspace = lazy(() => import('./atlas/Workspace'));
 const Developer = lazy(() => import('./atlas/Developer'));
+const Locations = lazy(() => import('./atlas/Locations'));
+const Listings = lazy(() => import('./atlas/Listings'));
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 5 * 60 * 1000, retry: 1, refetchOnWindowFocus: false } },
 });
@@ -25,6 +27,8 @@ export default function App() {
                 <Route index element={<Overview />} />
                 <Route path="context" element={<Context />} />
                 <Route path="counties" element={<Counties />} />
+                <Route path="locations" element={<Locations />} />
+                <Route path="listings" element={<Listings />} />
                 <Route path="market" element={<Market />} />
                 <Route path="sources" element={<Sources />} />
                 <Route path="workspace" element={<Workspace />} />

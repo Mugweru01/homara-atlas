@@ -1,9 +1,16 @@
 import {loadReference,revision,repository,attribution} from './location-dataset.mjs';
+const expectedLicense='CC BY 4.0 (data); MIT (upstream library code)';
+const permissionUrl=repository+'/blob/'+revision+'/data/LICENSE.md';
+function validateSource(s){
+ if(s.driver!=='kenya_locations'||s.status!=='active'||!s.publication_allowed||(s.rights_expire_at&&new Date(s.rights_expire_at)<=new Date()))throw new Error('geography_source_not_approved');
+ if(s.license!==expectedLicense||s.permission_url!==permissionUrl||s.attribution!==attribution)throw new Error('geography_source_metadata_mismatch');
+}
 export async function importLocations(db){
  const data=await loadReference();
  await db.query('BEGIN');
  try{
   await db.query("SELECT pg_advisory_xact_lock(hashtext('atlas-geography-import'))");
+  const previousSource=(await db.query("SELECT * FROM atlas_control.sources WHERE slug='kenya-locations' FOR SHARE")).rows[0];if(previousSource)validateSource(previousSource);
   const existing=(await db.query('SELECT id,manifest_sha256 FROM atlas_geo.releases WHERE revision=$1',[revision])).rows[0];
   if(existing){if(existing.manifest_sha256!==data.manifest_sha256)throw new Error('location_release_checksum_conflict');if(!(await db.query('SELECT 1 FROM atlas_geo.current_release WHERE release_id=$1',[existing.id])).rowCount)throw new Error('historical_release_requires_explicit_rollback');await db.query('COMMIT');return {status:'already_imported',release_id:existing.id,counts:data.counts};}
   const boundaryRows=(await db.query(`SELECT l.id,l.name FROM atlas_core.locations l JOIN atlas_control.sources s ON s.id=l.source_id WHERE l.kind='county' AND s.driver='geoboundaries_ken' AND s.status='active' AND s.publication_allowed AND(s.rights_expire_at IS NULL OR s.rights_expire_at>now())`)).rows;
@@ -15,7 +22,7 @@ export async function importLocations(db){
   if(new Set(mapping.map(r=>r.location_id)).size!==47)throw new Error('county_mapping_not_bijective');
   await db.query(`INSERT INTO atlas_control.sources(slug,name,driver,data_kind,status,license,permission_url,attribution,approved_at,approved_by,publication_allowed,refresh_seconds,next_run_at)
    VALUES('kenya-locations','kenya-locations — David Amunga and contributors','kenya_locations','geography','active','CC BY 4.0 (data); MIT (upstream library code)',$1,$2,now(),'cli:published-open-license',true,2592000,'2099-01-01') ON CONFLICT(slug) DO NOTHING`,[repository+'/blob/'+revision+'/data/LICENSE.md',attribution]);
-  const source=(await db.query("SELECT id,driver,status,publication_allowed FROM atlas_control.sources WHERE slug='kenya-locations' FOR UPDATE")).rows[0];if(source.driver!=='kenya_locations'||source.status!=='active'||!source.publication_allowed)throw new Error('geography_source_not_approved');
+  const source=(await db.query("SELECT * FROM atlas_control.sources WHERE slug='kenya-locations' FOR UPDATE")).rows[0];validateSource(source);
   const provenance={repository,revision,license:'CC-BY-4.0',license_url:'https://creativecommons.org/licenses/by/4.0/',attribution,counts:data.counts,boundary_set:'IEBC 2012',sub_county_vintage:'HDX/DHIS2 source data, 2016–2020; project-assigned codes',limitations:['Reference place names and relationships, not property coordinates or map polygons.','Locality and area provenance is undocumented upstream; coverage is incomplete.','104 ward-to-sub-county links use guided/fuzzy matching or inference.','2019 county populations are historical census context; postal codes refer to county capitals.'],changes:'Atlas assigns internal UUIDs and maps county codes to existing boundary UUIDs; upstream records are retained unchanged in the vendored snapshot.'};
   provenance.county_crosswalk={'013':{reference_name:'Tharaka-Nithi',boundary_name:'Tharaka',basis:'Reviewed label in the existing geoBoundaries KEN ADM1 2020 county layer; existing county UUID preserved.'}};
   const release=(await db.query('INSERT INTO atlas_geo.releases(source_id,revision,package_version,manifest_sha256,provenance) VALUES($1,$2,$3,$4,$5) RETURNING id',[source.id,revision,data.manifest.package_version,data.manifest_sha256,JSON.stringify(provenance)])).rows[0].id;
