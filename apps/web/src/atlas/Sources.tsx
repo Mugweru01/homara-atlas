@@ -226,7 +226,7 @@ export default function Sources() {
                     {source.slug === 'kenya-locations'
                       ? 'Reviewed, versioned imports'
                       : source.slug === 'kpc-market-statistics'
-                        ? 'Daily collection; publisher releases monthly'
+                        ? 'Monthly publisher figures; see collection status'
                         : source.data_kind === 'geography'
                           ? 'Weekly'
                           : source.data_kind === 'context'

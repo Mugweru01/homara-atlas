@@ -53,7 +53,7 @@ export function createApp(d:Dependencies) {
  });
  app.get('/api/v1/system/data-health',async c=>{
   const {rows}=await d.pool.query(`SELECT slug,data_kind,status,last_success_at,
-   (status<>'active' OR (rights_expire_at IS NOT NULL AND rights_expire_at<=now()) OR last_success_at IS NULL
+   (status<>'active' OR (rights_expire_at IS NOT NULL AND rights_expire_at<=now()) OR (not_before_at IS NOT NULL AND not_before_at>now()) OR last_success_at IS NULL
     OR (driver='kenya_locations' AND NOT EXISTS(SELECT 1 FROM atlas_geo.published_release))
     OR (driver<>'kenya_locations' AND last_success_at<now()-make_interval(secs=>refresh_seconds*2))) AS stale
    FROM atlas_control.sources WHERE driver NOT IN ('manual_listings','homara_public') ORDER BY slug`);
