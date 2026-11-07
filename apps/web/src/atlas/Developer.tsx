@@ -70,6 +70,35 @@ export default function Developer() {
                 ['/system/data-health', 'Dataset freshness and source status'],
                 ['/sources', 'Published sources, licences and attribution'],
                 ['/geography/counties', 'County identifiers and boundary vintage'],
+                [
+                  '/geography/openapi.json',
+                  'Machine-readable geographic API contract (OpenAPI 3.1)',
+                ],
+                [
+                  '/geography/dataset',
+                  'Location dataset version, licence, attribution and limitations',
+                ],
+                [
+                  '/geography/constituencies?county_code=047',
+                  'Constituencies filtered by county code',
+                ],
+                [
+                  '/geography/wards?county_code=047',
+                  'Wards; county_code, constituency_code, parent_id, limit, offset',
+                ],
+                ['/geography/sub-counties?county_code=047', 'Historical HDX/DHIS2 sub-counties'],
+                [
+                  '/geography/localities?county_code=047',
+                  'Informal localities with provenance labels',
+                ],
+                [
+                  '/geography/areas?county_code=047',
+                  'Informal areas; filter by county_code or locality parent_id',
+                ],
+                [
+                  '/geography/search?q=Westlands',
+                  'Literal place-name and alias search; 2–80 characters, maximum 25 results',
+                ],
                 ['/context/indicators', 'Annual national observations; code, limit, offset'],
                 ['/analytics/overview', 'Current asking-market coverage'],
                 [
@@ -100,6 +129,8 @@ export default function Developer() {
           <p>
             Pagination defaults to 50 and is capped at 100. Request budgets apply; respect HTTP 429
             and the Retry-After header. Unavailable estimates are null, never invented zeroes.
+            Geography reads share an additional budget of 180 requests per minute. Codes retain
+            leading zeroes. Unknown or repeated query parameters are rejected.
           </p>
         </article>
         <article>

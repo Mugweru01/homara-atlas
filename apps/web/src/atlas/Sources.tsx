@@ -22,7 +22,9 @@ export default function Sources() {
       ? 'geoBoundaries'
       : s.slug === 'worldbank-wdi-ken'
         ? 'World Bank'
-        : s.name;
+        : s.slug === 'kenya-locations'
+          ? 'kenya-locations'
+          : s.name;
   return (
     <>
       <PageHeading
@@ -82,30 +84,36 @@ export default function Sources() {
                       <span>
                         {short(s)}
                         <small>
-                          {s.data_kind === 'geography'
-                            ? 'Administrative boundaries'
-                            : s.data_kind === 'context'
-                              ? 'World Development Indicators'
-                              : 'Approved listing feed'}
+                          {s.slug === 'kenya-locations'
+                            ? 'David Amunga and contributors'
+                            : s.data_kind === 'geography'
+                              ? 'Administrative boundaries'
+                              : s.data_kind === 'context'
+                                ? 'World Development Indicators'
+                                : 'Approved listing feed'}
                         </small>
                       </span>
                     </button>
                   </td>
                   <td>
-                    {s.data_kind === 'geography'
-                      ? 'Kenya counties'
-                      : s.data_kind === 'context'
-                        ? 'Kenya national context'
-                        : 'Property listings'}
+                    {s.slug === 'kenya-locations'
+                      ? 'Counties, wards and place names'
+                      : s.data_kind === 'geography'
+                        ? 'Kenya counties'
+                        : s.data_kind === 'context'
+                          ? 'Kenya national context'
+                          : 'Property listings'}
                   </td>
                   <td>{date(s.last_success_at)}</td>
                   <td>
                     <Status
                       muted={health.data?.sources.find((h) => h.slug === s.slug)?.stale !== false}
                     >
-                      {health.data?.sources.find((h) => h.slug === s.slug)?.stale === false
-                        ? 'Current'
-                        : 'Check freshness'}
+                      {s.slug === 'kenya-locations'
+                        ? 'Pinned release'
+                        : health.data?.sources.find((h) => h.slug === s.slug)?.stale === false
+                          ? 'Current'
+                          : 'Check freshness'}
                     </Status>
                   </td>
                   <td>
@@ -209,20 +217,38 @@ export default function Sources() {
                 <div>
                   <dt>Refresh schedule</dt>
                   <dd>
-                    {source.data_kind === 'geography'
-                      ? 'Weekly'
-                      : source.data_kind === 'context'
-                        ? 'Daily'
-                        : 'Operator submitted'}
+                    {source.slug === 'kenya-locations'
+                      ? 'Reviewed, versioned imports'
+                      : source.data_kind === 'geography'
+                        ? 'Weekly'
+                        : source.data_kind === 'context'
+                          ? 'Daily'
+                          : 'Operator submitted'}
                   </dd>
                 </div>
                 <div>
                   <dt>Licence</dt>
                   <dd>{source.license}</dd>
                 </div>
+                {source.dataset_version && (
+                  <div>
+                    <dt>Dataset version</dt>
+                    <dd>
+                      {source.dataset_version} · {source.dataset_revision?.slice(0, 12)}
+                    </dd>
+                  </div>
+                )}
               </dl>
               <h3>Attribution</h3>
               <p>{source.attribution}</p>
+              {source.slug === 'kenya-locations' && (
+                <p className="provenance">
+                  Electoral reference: IEBC 2012. Sub-counties use historical HDX/DHIS2 data; some
+                  ward links are inferred. Informal locality and area provenance is incomplete.
+                  County population figures refer to 2019. This dataset supplies names and
+                  relationships, not map polygons or property coordinates.
+                </p>
+              )}
               <a
                 className="button primary"
                 href={source.permission_url}

@@ -1,0 +1,4 @@
+# Preserve the exact bytes covered by the upstream data manifest on every OS.
+data-platform/reference/kenya-locations/* -text
+# New migrations use reproducible LF bytes for their SHA-256 ledger entries.
+database/neon/01*.sql text eol=lf

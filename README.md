@@ -52,19 +52,22 @@ The visual system follows Homara’s forest green, warm cream and restrained gol
 
 ## What data is available?
 
-Coverage verified on **5 November 2026**:
+Public coverage updated on **7 November 2026**:
 
 | Dataset | Recorded coverage | Source and permitted-use record | Refresh |
 | --- | --- | --- | --- |
 | Kenya national context | **104 annual observations**, four indicators, available years from 2000 onward | World Bank, World Development Indicators; CC BY 4.0 | Daily |
 | County geography | **47 county boundaries**, reference vintage **2020** | geoBoundaries; underlying metadata identifies Public Domain sources from RCMRD/Africa GeoPortal; attribution retained | Weekly |
-| Property observations | **No approved listing feed yet** | A new source must be registered and explicitly approved before ingestion/publication | Feed dependent |
+| Location reference | **47 counties, 290 constituencies, 1,450 wards, 302 historical sub-counties, 917 localities and 1,829 areas** | [kenya-locations](https://github.com/davidamunga/kenya-locations), by **David Amunga and contributors**; data CC BY 4.0; IEBC/KNBS and historical HDX/American Red Cross credit retained | Pinned, reviewed imports |
+| Public property observations | **No public listing inventory** | Publication requires explicit rights and sufficient evidence; confidential inputs are excluded | Feed dependent |
 
 The four national series are total population, urban population share, consumer price inflation and GDP per capita in current US dollars. **GDP per capita is not household income.** County boundaries are administrative context, not cadastral surveys or property coordinates.
 
 Atlas stores source attribution, retrieval history and checksum-addressed raw artifacts. The interface distinguishes **reference year** from **collection date**, so a recent retrieval does not make an older boundary or annual observation current-year evidence.
 
 Source documentation: [World Bank WDI](https://datacatalog.worldbank.org/search/dataset/0037712/world-development-indicators), [World Bank public licences](https://datacatalog.worldbank.org/public-licenses), [geoBoundaries Kenya ADM1 metadata](https://www.geoboundaries.org/api/current/gbOpen/KEN/ADM1/). Map-asset attribution is also recorded in [the bundled provenance file](apps/web/public/kenya-counties.provenance.json).
+
+Location reference data comes from [kenya-locations, by David Amunga and contributors](https://github.com/davidamunga/kenya-locations/tree/6c837b48a29ea2424ecda2abaea2ae6d3670db68), pinned at version **0.12.0**. Its [CC BY 4.0 data licence](data-platform/reference/kenya-locations/LICENSE.md), checksums and source metadata are retained. Electoral reference is IEBC 2012; sub-counties are historical DHIS2 data, with some inferred ward links. Informal-place provenance and coverage are incomplete. These are place references, not property coordinates or map polygons. See the [location API and operations guide](docs/LOCATION_REFERENCE.md).
 
 ### How property statistics become publishable
 
@@ -204,7 +207,7 @@ npm run check:functions
 
 Database tests need an explicitly isolated environment. The [database workflow](.github/workflows/backend-database.yml) is an executable reference for the local PostgreSQL setup; do not aim these tests at production. Python tests run from `api` after installing `requirements.txt`.
 
-Verification completed during this milestone: **18 backend tests**, **nine Python tests**, **three frontend environment tests**, production builds, live Auth/report/Realtime flows, actual data collection, encrypted restore and desktop/mobile browser checks. The frontend lint check retains seven existing Fast Refresh warnings in reusable primitives. Audits currently report no high/critical findings; lower-severity frontend dependency advisories remain and are not represented as resolved.
+The current backend suite has **29 passing tests**, including geography validation, publication permissions and confidentiality checks. The location milestone also passed **three frontend environment tests**, both TypeScript checks, a production build and live API/source-credit checks. Earlier milestones verified nine Python tests, live Auth/report/Realtime flows, encrypted restore and desktop/mobile layouts. Frontend lint retains seven existing Fast Refresh warnings; scoped formatting passes for changed files, while the full formatting check flags existing differences in untouched files. Lower-severity frontend dependency advisories remain and are not represented as resolved.
 
 ## Security, recovery and practical limits
 

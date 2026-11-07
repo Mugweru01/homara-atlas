@@ -14,6 +14,8 @@
     "db:operator": "node --env-file=.env.local scripts/operator.mjs",
     "db:backup": "node --env-file=.env.local --env-file=.env.backup.local scripts/backup-backend.mjs",
     "db:migrate": "node --env-file=.env.local scripts/migrate.mjs",
+    "locations:check": "node scripts/import-locations.mjs --check",
+    "locations:import": "node --env-file=.env.local scripts/import-locations.mjs --apply",
     "smoke:neon": "node --env-file=.env.local scripts/smoke-neon.mjs"
   },
   "dependencies": {
