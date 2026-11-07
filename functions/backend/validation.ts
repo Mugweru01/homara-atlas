@@ -33,7 +33,7 @@ export function instant(value: unknown, now = Date.now()): string {
   if (!Number.isFinite(time) || time > now + 300000 || time < Date.UTC(2000,0,1)) throw new InputError('invalid_timestamp');
   return new Date(time).toISOString();
 }
-export const listingKeys = ['source_listing_id','source_url','observed_at','source_updated_at','listing_type','property_type','county_id','neighbourhood','bedrooms','price_amount','currency','rent_period','floor_area_sqm','plot_area_sqm','availability','status_evidence'];
+export const listingKeys = ['source_listing_id','source_url','observed_at','source_updated_at','listing_type','property_type','county_id','neighbourhood','bedrooms','bathrooms','price_amount','currency','rent_period','floor_area_sqm','plot_area_sqm','availability','status_evidence'];
 export function listing(value: unknown, now = Date.now()) {
   const v = object(value); exact(v, listingKeys);
   const type = oneOf(v.listing_type, ['sale','rent']);
@@ -43,6 +43,8 @@ export function listing(value: unknown, now = Date.now()) {
   if (['sold','let'].includes(availability) && evidence !== 'provider_confirmation') throw new InputError('unconfirmed_outcome');
   const bedrooms = v.bedrooms == null ? null : v.bedrooms;
   if (bedrooms !== null && (typeof bedrooms !== 'number' || !Number.isInteger(bedrooms) || bedrooms < 0 || bedrooms > 30)) throw new InputError('invalid_bedrooms');
+  const bathrooms=v.bathrooms==null?null:v.bathrooms;
+  if(bathrooms!==null&&(typeof bathrooms!=='number'||!Number.isInteger(bathrooms)||bathrooms<0||bathrooms>30))throw new InputError('invalid_bathrooms');
   const rentPeriod = type === 'rent' ? oneOf(v.rent_period, ['month','week','day']) : null;
   if (type === 'sale' && v.rent_period != null) throw new InputError('sale_has_rent_period');
   const observed = instant(v.observed_at, now);
@@ -51,7 +53,7 @@ export function listing(value: unknown, now = Date.now()) {
   return {
     source_listing_id: text(v.source_listing_id,160)!, source_url: httpsUrl(v.source_url), observed_at: observed, source_updated_at: updated,
     listing_type: type, property_type: oneOf(v.property_type, ['apartment','house','land','office','retail','warehouse']),
-    county_id: uuid(String(v.county_id)), neighbourhood: text(v.neighbourhood,120,false), bedrooms,
+    county_id: uuid(String(v.county_id)), neighbourhood: text(v.neighbourhood,120,false), bedrooms, bathrooms,
     price_amount: number(v.price_amount,1e12)!, currency: oneOf(v.currency,['KES']), rent_period: rentPeriod,
     floor_area_sqm: number(v.floor_area_sqm,1e7,false), plot_area_sqm: number(v.plot_area_sqm,1e9,false), availability, status_evidence: evidence,
   };

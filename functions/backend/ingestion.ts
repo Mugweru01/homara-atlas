@@ -6,6 +6,7 @@ import type { Storage } from './storage.js';
 import { download, worldBankUrl, boundaryMetadataUrl, parseWorldBank, parseBoundaryMetadata, parseBoundaries, type Download } from './connectors.js';
 import { listing, object, exact, listingKeys, hash, InputError, httpsUrl } from './validation.js';
 import { publishInTransaction } from './publication.js';
+import { downloadHomara,homaraListing } from './homara.js';
 
 export type Source={id:string;slug:string;driver:string;data_kind:string;status:string;publication_allowed:boolean;rights_expire_at:Date|null};
 export type Job={id:string;source_id:string;payload:unknown;attempts:number;max_attempts:number;lease_token:string};
@@ -23,10 +24,11 @@ export function validateManualEnvelope(payload:unknown) {
   if(typeof row.source_listing_id!=='string'||!/^[A-Za-z0-9._:-]{1,160}$/.test(row.source_listing_id))throw new InputError('invalid_source_listing_id');
   httpsUrl(row.source_url);
  }
- return v;
+ return {records:v.records as unknown[]};
 }
 export async function enqueue(db:PoolClient,source:Source,key:string,payload:unknown,actor:string) {
  if(!isApproved(source))throw new InputError('source_not_approved');
+ if(source.driver==='kenya_locations')throw new InputError('source_requires_reviewed_import');
  if(source.driver==='manual_listings')validateManualEnvelope(payload);
  else if(payload!=null)throw new InputError('connector_payload_not_allowed');
  const digest=hash(payload??null);
@@ -41,7 +43,7 @@ export async function scheduleDue(pool:Pool) {
    await db.query(`UPDATE atlas_control.jobs j SET status='blocked',error_code='source_not_approved',finished_at=now()
     FROM atlas_control.sources s WHERE s.id=j.source_id AND j.status IN ('queued','retry')
     AND (s.status<>'active' OR (s.rights_expire_at IS NOT NULL AND s.rights_expire_at<=now()))`);
-   const {rows}=await db.query(`SELECT * FROM atlas_control.sources WHERE driver<>'manual_listings' AND status='active'
+   const {rows}=await db.query(`SELECT * FROM atlas_control.sources WHERE driver IN ('worldbank_wdi','geoboundaries_ken','homara_public') AND status='active'
     AND (rights_expire_at IS NULL OR rights_expire_at>now()) AND next_run_at<=now() ORDER BY next_run_at FOR UPDATE SKIP LOCKED LIMIT 5`);
    for(const source of rows){
     await enqueue(db,source,`schedule:${new Date(source.next_run_at).toISOString()}`,null,'system:scheduler');
@@ -98,10 +100,11 @@ function localDownload(value:unknown):Download {const bytes=Buffer.from(JSON.str
 export async function processJob(pool:Pool,storage:Storage,job:Job,fetcher:typeof fetch=fetch) {
  const {rows:[source]}=await pool.query('SELECT * FROM atlas_control.sources WHERE id=$1',[job.source_id]);
  if(!source||!isApproved(source))throw new Error('source_not_approved');
- const observedAt=new Date().toISOString();
+ const observedAt=(await pool.query('SELECT clock_timestamp() AS time')).rows[0].time.toISOString();
  // Fetch outside a database transaction: network outages never hold SQL locks.
  const downloads:Download[]=[];
- if(source.driver==='worldbank_wdi')downloads.push(await download(worldBankUrl(),fetcher));
+ if(source.driver==='homara_public')downloads.push(await downloadHomara(process.env.ATLAS_HOMARA_PUBLIC_KEY,fetcher));
+ else if(source.driver==='worldbank_wdi')downloads.push(await download(worldBankUrl(),fetcher));
  else if(source.driver==='geoboundaries_ken'){
   const metadata=await download(boundaryMetadataUrl,fetcher);downloads.push(metadata);
   const parsed=parseBoundaryMetadata(metadata.value);await heartbeat(pool,job);
@@ -134,11 +137,12 @@ export async function processJob(pool:Pool,storage:Storage,job:Job,fetcher:typeo
   } else {
    const rows=object(downloads[0].value).records as unknown[];received=rows.length;
    const valid:ReturnType<typeof listing>[]=[];
-   const counties=new Set((await db.query("SELECT id FROM atlas_core.locations WHERE kind='county'")).rows.map(r=>r.id));
+   const countyRows=(await db.query("SELECT id,name FROM atlas_core.locations WHERE kind='county'")).rows;
+   const counties=new Set(countyRows.map(r=>r.id));
    const seen=new Map<string,string>();
    for(let i=0;i<rows.length;i++){
     let v:ReturnType<typeof listing>;
-    try{v=listing(rows[i]);}catch(error){rejected++;await db.query('INSERT INTO atlas_control.quality_issues(job_id,item_key,codes) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',[job.id,String(i),[error instanceof InputError?error.code:'invalid_record']]);continue;}
+    try{v=source.driver==='homara_public'?homaraListing(rows[i],countyRows,observedAt):listing(rows[i]);}catch(error){rejected++;await db.query('INSERT INTO atlas_control.quality_issues(job_id,item_key,codes) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',[job.id,String(i),[error instanceof InputError?error.code:'invalid_record']]);continue;}
     if(!counties.has(v.county_id)){rejected++;await db.query('INSERT INTO atlas_control.quality_issues(job_id,item_key,codes) VALUES($1,$2,$3)',[job.id,String(i),['unknown_county']]);continue;}
     const key=v.source_listing_id+'|'+v.observed_at,digest=hash(v),previous=seen.get(key);
     if(previous){if(previous===digest)duplicates++;else{rejected++;await db.query('INSERT INTO atlas_control.quality_issues(job_id,item_key,codes) VALUES($1,$2,$3)',[job.id,String(i),['conflicting_observation']]);}continue;}
@@ -148,9 +152,9 @@ export async function processJob(pool:Pool,storage:Storage,job:Job,fetcher:typeo
    await db.query(`INSERT INTO atlas_core.source_listings(source_id,source_listing_id,first_seen_at,last_seen_at)
     SELECT $1,r.source_listing_id,min(r.observed_at),max(r.observed_at) FROM jsonb_to_recordset($2::jsonb) r(source_listing_id text,observed_at timestamptz)
     GROUP BY r.source_listing_id ON CONFLICT(source_id,source_listing_id) DO UPDATE SET first_seen_at=least(atlas_core.source_listings.first_seen_at,EXCLUDED.first_seen_at),last_seen_at=greatest(atlas_core.source_listings.last_seen_at,EXCLUDED.last_seen_at)`,[source.id,payload]);
-   const r=await db.query(`INSERT INTO atlas_core.listing_observations(listing_id,job_id,artifact_id,content_hash,observed_at,source_updated_at,source_url,listing_type,property_type,county_id,neighbourhood,bedrooms,price_amount,currency,rent_period,floor_area_sqm,plot_area_sqm,availability,status_evidence)
-    SELECT l.id,$2,$3,r.digest,r.observed_at,r.source_updated_at,r.source_url,r.listing_type,r.property_type,r.county_id,r.neighbourhood,r.bedrooms,r.price_amount,r.currency,r.rent_period,r.floor_area_sqm,r.plot_area_sqm,r.availability,r.status_evidence
-    FROM jsonb_to_recordset($4::jsonb) r(source_listing_id text,digest text,observed_at timestamptz,source_updated_at timestamptz,source_url text,listing_type text,property_type text,county_id uuid,neighbourhood text,bedrooms smallint,price_amount numeric,currency text,rent_period text,floor_area_sqm numeric,plot_area_sqm numeric,availability text,status_evidence text)
+   const r=await db.query(`INSERT INTO atlas_core.listing_observations(listing_id,job_id,artifact_id,content_hash,observed_at,source_updated_at,source_url,listing_type,property_type,county_id,neighbourhood,bedrooms,bathrooms,price_amount,currency,rent_period,floor_area_sqm,plot_area_sqm,availability,status_evidence)
+    SELECT l.id,$2,$3,r.digest,r.observed_at,r.source_updated_at,r.source_url,r.listing_type,r.property_type,r.county_id,r.neighbourhood,r.bedrooms,r.bathrooms,r.price_amount,r.currency,r.rent_period,r.floor_area_sqm,r.plot_area_sqm,r.availability,r.status_evidence
+    FROM jsonb_to_recordset($4::jsonb) r(source_listing_id text,digest text,observed_at timestamptz,source_updated_at timestamptz,source_url text,listing_type text,property_type text,county_id uuid,neighbourhood text,bedrooms smallint,bathrooms smallint,price_amount numeric,currency text,rent_period text,floor_area_sqm numeric,plot_area_sqm numeric,availability text,status_evidence text)
     JOIN atlas_core.source_listings l ON l.source_id=$1 AND l.source_listing_id=r.source_listing_id ON CONFLICT DO NOTHING`,[source.id,job.id,artifactIds[0],payload]);
    accepted=r.rowCount||0;
    const conflicts=await db.query(`SELECT r.source_listing_id,r.observed_at FROM jsonb_to_recordset($2::jsonb) r(source_listing_id text,observed_at timestamptz,digest text)
@@ -159,7 +163,7 @@ export async function processJob(pool:Pool,storage:Storage,job:Job,fetcher:typeo
    for(const conflict of conflicts.rows){rejected++;await db.query('INSERT INTO atlas_control.quality_issues(job_id,item_key,codes) VALUES($1,$2,$3) ON CONFLICT DO NOTHING',[job.id,'conflict:'+conflict.source_listing_id,['conflicting_observation']]);}
    duplicates+=valid.length-accepted-conflicts.rowCount!;
   }
-  const code=rejected===received?'all_records_quarantined':null;
+  const code=received>0&&rejected===received?'all_records_quarantined':null;
   const status=code?'blocked':'succeeded';
   if(!code)await db.query('UPDATE atlas_control.sources SET last_success_at=now(),watermark=$2 WHERE id=$1',[source.id,JSON.stringify({observed_at:observedAt,job_id:job.id})]);
   await db.query(`UPDATE atlas_control.jobs SET status=$3,finished_at=now(),lease_token=NULL,lease_expires_at=NULL,

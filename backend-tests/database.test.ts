@@ -27,7 +27,37 @@ before(async()=>{
  await owner.query("INSERT INTO atlas_security.operator_roles(user_id,role) VALUES($1,'admin')",[actor]);
 });
 after(async()=>{await Promise.all([owner.end(),api.end(),worker.end()]);});
+test('research views enforce ownership and operator extensions cannot be used anonymously',async()=>{
+ assert.equal((await req('/api/v1/admin/me')).status,401);
+ assert.equal((await req('/api/v1/admin/validate-listings','other',{records:[]})).status,403);
+ assert.equal((await req('/api/v1/admin/me','admin')).status,200);
+ const saved=await req('/api/v1/workspace/research/views','admin',{name:'Nairobi research',filters:{county_ids:[county],listing_type:'rent'}});assert.equal(saved.status,201);const view=await saved.json();
+ assert.equal((await req('/api/v1/workspace/research/views','other')).status,200);
+ assert.equal((await (await req('/api/v1/workspace/research/views','other')).json()).results.length,0);
+ assert.equal((await req('/api/v1/workspace/research/views/'+view.id,'other',undefined,'DELETE')).status,404);
+ assert.equal((await transaction(api,db=>db.query('select id from public.atlas_saved_views where id=$1',[view.id]),other)).rowCount,0);
+ assert.equal((await req('/api/v1/workspace/research/views/'+view.id,'admin',undefined,'DELETE')).status,204);
+ assert.equal((await req('/api/v1/research/compare',undefined,{county_ids:[county],listing_type:'airbnb'})).status,400);
+});
 const record=(id:string,price=50000,when=new Date().toISOString())=>({source_listing_id:id,source_url:'https://partner.example/listing/'+id,observed_at:when,listing_type:'rent',property_type:'apartment',county_id:county,bedrooms:2,price_amount:price,currency:'KES',rent_period:'month',availability:'active',status_evidence:'advertisement'});
+test('Homara connector writes source-scoped observations and bathrooms; an empty export is a successful snapshot',async()=>{
+ const {rows:[s]}=await owner.query(`INSERT INTO atlas_control.sources(slug,name,driver,data_kind,status,license,permission_url,attribution,approved_at,approved_by,publication_allowed,next_run_at)
+ VALUES($1,'Homara test','homara_public','listings','active','Test','https://homara.co.ke/p/terms','Test',now(),'owner',false,now()+interval '1 day') RETURNING *`,['homara-'+salt]);
+ const previous=process.env.ATLAS_HOMARA_PUBLIC_KEY;process.env.ATLAS_HOMARA_PUBLIC_KEY='public-test';process.env.ATLAS_HOMARA_FEED_TOKEN='a'.repeat(64);
+ try{
+  const payload={schema_version:1,records:[{id:randomUUID(),county:'Test County',property_type:'Apartment',listing_type:'rent',bedrooms:2,bathrooms:1,price_amount:20000,updated_at:new Date().toISOString()}],has_more:false};
+  await transaction(api,db=>enqueue(db,s,randomUUID(),null,actor));const job=await claim(worker);assert.ok(job);assert.equal(job.source_id,s.id);
+  const result=await processJob(worker,storage,job,async()=>new Response(JSON.stringify(payload)));assert.equal(result.accepted,1);
+  const {rows:[observation]}=await owner.query('SELECT o.bathrooms,o.price_amount,o.neighbourhood FROM atlas_core.listing_observations o JOIN atlas_core.source_listings l ON l.id=o.listing_id WHERE l.source_id=$1',[s.id]);assert.equal(observation.bathrooms,1);assert.equal(observation.neighbourhood,null);
+  assert.equal((await api.query('SELECT o.id FROM atlas_core.listing_observations o JOIN atlas_core.source_listings l ON l.id=o.listing_id WHERE l.source_id=$1',[s.id])).rowCount,0);
+  await assert.rejects(owner.query('UPDATE atlas_control.sources SET publication_allowed=true WHERE id=$1',[s.id]),{code:'23514'});
+  const publicHealth=JSON.stringify(await (await req('/api/v1/system/data-health')).json());assert.ok(!publicHealth.includes(s.slug));
+  assert.equal((await api.query('SELECT id FROM atlas_control.artifacts WHERE source_id=$1',[s.id])).rowCount,0);
+  await transaction(api,db=>enqueue(db,s,randomUUID(),null,actor));const empty=await claim(worker);assert.ok(empty);
+  const emptyResult=await processJob(worker,storage,empty,async()=>new Response(JSON.stringify({...payload,records:[]})));assert.equal(emptyResult.status,'succeeded');assert.equal(emptyResult.received,0);
+  await assert.rejects(transaction(api,db=>enqueue(db,s,randomUUID(),{records:[]},actor)),/connector_payload_not_allowed/);
+ }finally{if(previous===undefined)delete process.env.ATLAS_HOMARA_PUBLIC_KEY;else process.env.ATLAS_HOMARA_PUBLIC_KEY=previous;}
+});
 async function queue(payload:unknown,key=randomUUID()) {return transaction(api,db=>enqueue(db,source,key,payload,actor));}
 test('database roles cannot mutate evidence, grant privileges or bypass report ownership',async()=>{
  await assert.rejects(api.query("UPDATE atlas_core.listing_observations SET availability='sold'"),{code:'42501'});

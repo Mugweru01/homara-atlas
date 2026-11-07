@@ -20,6 +20,8 @@ export default defineConfig({
    DATABASE_URL:process.env.ATLAS_WORKER_DATABASE_URL!,
    DATABASE_URL_UNPOOLED:process.env.ATLAS_WORKER_DATABASE_URL!,
    ATLAS_INTERNAL_TOKEN:process.env.ATLAS_INTERNAL_TOKEN!,
+   ATLAS_HOMARA_PUBLIC_KEY:process.env.ATLAS_HOMARA_PUBLIC_KEY!,
+   ATLAS_HOMARA_FEED_TOKEN:process.env.ATLAS_HOMARA_FEED_TOKEN!,
   }},
  },
  buckets:{assets:{access:'private'},atlasraw:{access:'private'}},

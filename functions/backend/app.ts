@@ -11,12 +11,14 @@ import { InputError, object, exact, text, httpsUrl, uuid, oneOf, pagination } fr
 import { rateLimit, type Principal } from './security.js';
 import { enqueue, type Source } from './ingestion.js';
 import type { Storage } from './storage.js';
+import { registerResearch } from './research.js';
+import { registerGeography } from './geography.js';
 
 export type Dependencies={
  pool:Pool; storage:Storage; verify:(token:string)=>Promise<Principal>; rateSecret:string;
  origins:string[]; seal:(userId:string)=>Promise<unknown>; kick?:()=>void;
 };
-type Variables={requestId:string;principal:Principal;operatorRole:string};
+export type Variables={requestId:string;principal:Principal;operatorRole:string};
 export function createApp(d:Dependencies) {
  if(d.rateSecret.length<32)throw new Error('A strong rate-limit secret is required');
  const app=new Hono<{Variables:Variables}>();
@@ -49,22 +51,18 @@ export function createApp(d:Dependencies) {
  });
  app.get('/api/v1/system/data-health',async c=>{
   const {rows}=await d.pool.query(`SELECT slug,data_kind,status,last_success_at,
-   (last_success_at IS NULL OR last_success_at<now()-make_interval(secs=>refresh_seconds*2)) AS stale
-   FROM atlas_control.sources WHERE driver<>'manual_listings' ORDER BY slug`);
+   (last_success_at IS NULL OR (driver<>'kenya_locations' AND last_success_at<now()-make_interval(secs=>refresh_seconds*2))) AS stale
+   FROM atlas_control.sources WHERE driver NOT IN ('manual_listings','homara_public') ORDER BY slug`);
   return c.json({status:rows.some(r=>r.stale)?'degraded':'current',sources:rows});
  });
  app.get('/api/v1/sources',async c=>{
-  const {rows}=await d.pool.query(`SELECT slug,name,data_kind,license,permission_url,attribution,last_success_at
-   FROM atlas_control.sources WHERE status='active' AND publication_allowed AND (rights_expire_at IS NULL OR rights_expire_at>now()) ORDER BY slug`);
+  const {rows}=await d.pool.query(`SELECT s.slug,s.name,s.data_kind,s.license,s.permission_url,s.attribution,s.last_success_at,
+   g.revision dataset_revision,g.package_version dataset_version
+   FROM atlas_control.sources s LEFT JOIN atlas_geo.published_release g ON g.source_id=s.id
+   WHERE s.status='active' AND s.publication_allowed AND (s.rights_expire_at IS NULL OR s.rights_expire_at>now()) ORDER BY s.slug`);
   return c.json({results:rows});
  });
- app.get('/api/v1/geography/counties',async c=>{
-  const {rows}=await d.pool.query(`SELECT l.id,l.name,v.reference_year FROM atlas_core.locations l
-   JOIN atlas_control.sources s ON s.id=l.source_id
-   JOIN LATERAL(SELECT reference_year FROM atlas_core.location_versions WHERE location_id=l.id ORDER BY observed_at DESC LIMIT 1)v ON true
-   WHERE l.kind='county' AND s.status='active' AND s.publication_allowed AND (s.rights_expire_at IS NULL OR s.rights_expire_at>now()) ORDER BY l.name`);
-  return c.json({results:rows,precision:'county',notice:'Administrative context; not cadastral or property-level coordinates.'});
- });
+ registerGeography(app,d);
  app.get('/api/v1/context/indicators',async c=>{
   const {limit,offset}=pagination(c.req.query());
   const code=c.req.query('code')||null;if(code&&!/^[A-Z0-9_.]{3,40}$/.test(code))throw new InputError('invalid_indicator_code');
@@ -234,5 +232,6 @@ export function createApp(d:Dependencies) {
  app.get('/api/v1/admin/audit',async c=>{
   admin(c.get('operatorRole'));const {limit,offset}=pagination(c.req.query());return c.json({results:(await d.pool.query('SELECT id,actor_id,action,resource_id,details,created_at FROM atlas_control.audit_events ORDER BY created_at DESC LIMIT $1 OFFSET $2',[limit,offset])).rows,limit,offset});
  });
+ registerResearch(app,d);
  return app;
 }

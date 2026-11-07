@@ -18,6 +18,8 @@ export type Source = {
   permission_url: string;
   attribution: string;
   last_success_at: string | null;
+  dataset_revision?: string | null;
+  dataset_version?: string | null;
 };
 export type Health = {
   status: string;

@@ -2,9 +2,9 @@ name: Backend and database contract tests
 on:
   push:
     branches: [main, develop]
-    paths: ['functions/**', 'database/neon/**', 'scripts/**', 'backend-tests/**', 'package*.json', 'tsconfig.json', 'neon.ts', '.github/workflows/backend-database.yml']
+    paths: ['functions/**', 'database/neon/**', 'data-platform/reference/**', 'scripts/**', 'backend-tests/**', 'package*.json', 'tsconfig.json', 'neon.ts', '.github/workflows/backend-database.yml']
   pull_request:
-    paths: ['functions/**', 'database/neon/**', 'scripts/**', 'backend-tests/**', 'package*.json', 'tsconfig.json', 'neon.ts', '.github/workflows/backend-database.yml']
+    paths: ['functions/**', 'database/neon/**', 'data-platform/reference/**', 'scripts/**', 'backend-tests/**', 'package*.json', 'tsconfig.json', 'neon.ts', '.github/workflows/backend-database.yml']
 permissions:
   contents: read
 concurrency:
@@ -43,6 +43,7 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run check:functions
+      - run: node scripts/import-locations.mjs --check
       - run: node scripts/migrate.mjs
       - run: node scripts/migrate.mjs
       - run: node scripts/bootstrap-test-db.mjs

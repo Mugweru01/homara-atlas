@@ -32,6 +32,16 @@ Market methodology `asking-market/1` uses the latest observation, active within 
 
 ## Deployment and operations
 
+Location reference data is stored in `atlas_geo`, using immutable releases and
+read-only, approval-gated publication views. The API cannot read base tables or
+write the active-release pointer. The pinned source is **kenya-locations by David
+Amunga and contributors**, with data licensed CC BY 4.0. Follow the
+[location integration runbook](LOCATION_REFERENCE.md) for import validation,
+county identity preservation, attribution, API limits, updates and rollback.
+Static reference imports are excluded from scheduled collection and cannot be
+queued through the operator job API. Encrypted backups include `atlas_geo`;
+off-device backup and alert delivery remain disabled.
+
 Use Node 24 and `npm ci --ignore-scripts`. Run `npm run check:functions` and backend tests before deployment. CI tests against PostgreSQL 18 with separate runtime roles and no cloud credentials. Cloud integration tests require the isolated `codex-backend-validation` branch and its dedicated role env file; never point tests at production.
 
 1. Authenticate Neon CLI to the owning account. Pull production services into an ignored owner env file. Never commit an env file.

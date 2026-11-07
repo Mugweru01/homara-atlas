@@ -1,0 +1,48 @@
+{
+  "repository": "https://github.com/davidamunga/kenya-locations",
+  "revision": "6c837b48a29ea2424ecda2abaea2ae6d3670db68",
+  "package_version": "0.12.0",
+  "license": "CC-BY-4.0",
+  "files": {
+    "counties.json": {
+      "sha256": "8459e2dbfc39df897c2684603d1710ebf55a8dc2dae1c787924f0acbd736ad28",
+      "bytes": 10803
+    },
+    "constituencies.json": {
+      "sha256": "096bdef9f6ed8a890834f8ad9cc47f05357880cf62000f49d2b65fa9e0dc47cb",
+      "bytes": 29848
+    },
+    "wards.json": {
+      "sha256": "dd2ce937adb414e06eb31f11217db4b73572bdc287f294ede5c377f301c546ce",
+      "bytes": 255252
+    },
+    "sub-counties.json": {
+      "sha256": "65a41695073b85292cc5461e647bff5be95800d2368d66aace9417f72f77602c",
+      "bytes": 31738
+    },
+    "locality.json": {
+      "sha256": "6a09d047af94479f5b17afd94b4c24b81f8483763291f365290e9fcb34457582",
+      "bytes": 77302
+    },
+    "area.json": {
+      "sha256": "560e7d5c2054daa360c794cdbf0d19e5ba55c769a5199604531c0e533158c6a3",
+      "bytes": 208309
+    },
+    "meta.json": {
+      "sha256": "ddef155263eb8b0cb3f9a122bc7a479b8636640d51530f14e1690e4c967bf1a4",
+      "bytes": 3170
+    },
+    "history.json": {
+      "sha256": "94d8e74933f1fb50dcac5786d5416bd5b6dd9ac1ba61e87bb983ea69390d0c0e",
+      "bytes": 80140
+    },
+    "LICENSE.md": {
+      "sha256": "7b46d0fffb8ea80244a45d9e0dbe62c03af7f7a7b9544a33d784f8323a1fb0b7",
+      "bytes": 606
+    },
+    "matches.json": {
+      "sha256": "8053d4a080eb850d6e94b984862929d96dd0d7ef1e0344f037c6764b4aa1565b",
+      "bytes": 28567
+    }
+  }
+}
