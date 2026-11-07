@@ -71,6 +71,22 @@ export default function Developer() {
                 ['/sources', 'Published sources, licences and attribution'],
                 ['/geography/counties', 'County identifiers and boundary vintage'],
                 [
+                  '/geography/regions',
+                  'Historical province groupings; location lists accept region filters',
+                ],
+                [
+                  '/listings',
+                  'Only approved public advertisements; county_id, listing_type, property_type, limit, offset',
+                ],
+                [
+                  '/research/benchmarks',
+                  'Licensed publisher market statistics; market_type, county, limit, offset',
+                ],
+                [
+                  '/collection/sources',
+                  'Public source reviews, permitted scope and collection status',
+                ],
+                [
                   '/geography/openapi.json',
                   'Machine-readable geographic API contract (OpenAPI 3.1)',
                 ],

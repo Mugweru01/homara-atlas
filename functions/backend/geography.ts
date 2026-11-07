@@ -6,6 +6,7 @@ import {InputError,oneOf,pagination,uuid} from './validation.js';
 import {rateLimit} from './security.js';
 import {geographyOpenApi} from './geography-openapi.js';
 const kinds=['county','constituency','ward','sub_county','locality','area'] as const;
+const regions=['Nairobi','Central','Coast','Eastern','North Eastern','Nyanza','Rift Valley','Western'] as const;
 export function locationQuery(url:string,allowed:string[]){
  const params=new URL(url).searchParams,query:Record<string,string>={};
  for(const [key,value]of params){if(!allowed.includes(key)||Object.hasOwn(query,key))throw new InputError('unexpected_or_duplicate_query_parameter');query[key]=value;}
@@ -32,6 +33,7 @@ export function registerGeography(app:Hono<{Variables:Variables}>,d:Dependencies
  });
  app.get('/api/v1/geography/openapi.json',c=>{locationQuery(c.req.url,[]);return c.json(geographyOpenApi);});
  app.get('/api/v1/geography/dataset',async c=>{locationQuery(c.req.url,[]);return c.json(await read(d.pool,db=>dataset(db)));});
+ app.get('/api/v1/geography/regions',async c=>{locationQuery(c.req.url,[]);return c.json(await read(d.pool,async db=>({dataset:await dataset(db),results:(await db.query("SELECT metadata->>'region' name,count(*)::int counties FROM atlas_geo.published_places WHERE kind='county' GROUP BY metadata->>'region' ORDER BY name")).rows,notice:'Regions are former provinces used as reference groupings, not a new administrative boundary layer.'})));});
  app.get('/api/v1/geography/counties',async c=>{
   locationQuery(c.req.url,[]);
   return c.json(await read(d.pool,async db=>{
@@ -47,7 +49,8 @@ export function registerGeography(app:Hono<{Variables:Variables}>,d:Dependencies
   }));
  });
  async function list(url:string,kind?:typeof kinds[number],search=false){
-  const q=locationQuery(url,['limit','offset','county_code','parent_id','constituency_code',...(kind?[]:['kind']),...(search?['q']:[])]),page=pagination(q);
+  const q=locationQuery(url,['limit','offset','county_code','parent_id','constituency_code','region',...(kind?[]:['kind']),...(search?['q']:[])]),page=pagination(q);
+  const region=q.region!==undefined?oneOf(q.region,regions):null;
   const selected=kind??(q.kind!==undefined?oneOf(q.kind,kinds):null),county=numericCode(q.county_code),constituency=numericCode(q.constituency_code),parent=q.parent_id!==undefined?uuid(q.parent_id):null;
   const term=search?q.q?.normalize('NFC').trim():null;
   if(search&&(!term||term.length<2||term.length>80||/[\u0000-\u001f]/.test(term)))throw new InputError('search_requires_2_to_80_characters');
@@ -60,7 +63,8 @@ export function registerGeography(app:Hono<{Variables:Variables}>,d:Dependencies
     AND($3::uuid IS NULL OR EXISTS(SELECT 1 FROM atlas_geo.published_relations x WHERE x.child_id=p.id AND x.parent_id=$3))
     AND($4::text IS NULL OR EXISTS(SELECT 1 FROM atlas_geo.published_relations x JOIN atlas_geo.published_places parent ON parent.id=x.parent_id WHERE x.child_id=p.id AND x.kind='constituency' AND parent.code=$4))
     AND($5::text IS NULL OR strpos(lower(p.name),lower($5))>0 OR EXISTS(SELECT 1 FROM jsonb_array_elements_text(coalesce(p.metadata->'aliases','[]'::jsonb)) alias WHERE strpos(lower(alias),lower($5))>0))
-    ORDER BY lower(p.name),p.kind,p.id LIMIT $6 OFFSET $7`,[selected,county,parent,constituency,term,page.limit+1,page.offset]);
+    AND($8::text IS NULL OR p.county_code IN(SELECT code FROM atlas_geo.published_places WHERE kind='county' AND metadata->>'region'=$8))
+    ORDER BY lower(p.name),p.kind,p.id LIMIT $6 OFFSET $7`,[selected,county,parent,constituency,term,page.limit+1,page.offset,region]);
    return {results:rows.slice(0,page.limit),...page,has_more:rows.length>page.limit,dataset:reference,notice:'Public location reference only. Informal places are not guaranteed ward assignments; no property records or listing counts are included.'};
   });
  }

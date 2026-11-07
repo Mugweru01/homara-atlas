@@ -13,11 +13,13 @@ const req=(path:string,init?:RequestInit)=>app.request('https://atlas.example/ap
 let sourceId:string,releaseId:string,nairobiId:string;
 before(async()=>{
  const data=await loadReference();sourceId=(await owner.query("SELECT id FROM atlas_control.sources WHERE driver='geoboundaries_ken'")).rows[0].id;
- for(const c of data.raw.counties)await owner.query("INSERT INTO atlas_core.locations(source_id,source_key,name,kind) VALUES($1,$2,$3,'county') ON CONFLICT(source_id,source_key) DO NOTHING",[sourceId,'reference-test-'+c.code,c.name]);
+ const existingCounties=(await owner.query("SELECT id,name FROM atlas_core.locations WHERE source_id=$1 AND kind='county'",[sourceId])).rows;
+ const normalized=(name:string)=>name.toLowerCase().replace(/ city$| county$/g,'').replace(/[^\p{L}\p{N}]/gu,'');
+ for(const c of data.raw.counties){const names=[c.name,...c.aliases,...(c.code==='013'?['Tharaka']:[])].map(normalized);if(!existingCounties.some(r=>names.includes(normalized(r.name))))await owner.query("INSERT INTO atlas_core.locations(source_id,source_key,name,kind) VALUES($1,$2,$3,'county') ON CONFLICT(source_id,source_key) DO NOTHING",[sourceId,'reference-test-'+c.code,c.name]);}
  const artifact=(await owner.query("INSERT INTO atlas_control.artifacts(source_id,sha256,object_key,byte_length) VALUES($1,$2,'test/reference-boundaries',1) ON CONFLICT(source_id,sha256) DO UPDATE SET sha256=EXCLUDED.sha256 RETURNING id",[sourceId,'f'.repeat(64)])).rows[0].id;
  await owner.query("INSERT INTO atlas_core.location_versions(location_id,artifact_id,revision_key,reference_year,observed_at) SELECT id,$1,'reference-test-2020',2020,now() FROM atlas_core.locations WHERE source_id=$2 ON CONFLICT DO NOTHING",[artifact,sourceId]);
  const db=await owner.connect();try{releaseId=(await importLocations(db)).release_id;}finally{db.release();}
- nairobiId=(await owner.query("SELECT id FROM atlas_core.locations WHERE source_id=$1 AND name='Nairobi'",[sourceId])).rows[0].id;
+ nairobiId=(await owner.query("SELECT location_id FROM atlas_geo.county_mapping WHERE release_id=$1 AND county_code='047'",[releaseId])).rows[0].location_id;
 });
 after(async()=>{await owner.end();await api.end();});
 test('pinned reference validation rejects incomplete data, duplicate IDs and broken parents',async()=>{
@@ -41,6 +43,8 @@ test('location API preserves county IDs, returns attribution, paginates and dist
  const alias=await (await req('/search?q=Nairobi%20City&kind=county')).json();assert.equal(alias.results[0].code,'047');
  const literal=await (await req('/search?q=%25_')).json();assert.equal(literal.results.length,0);
  const informal=await (await req('/areas?county_code=047&limit=1')).json();assert.equal(informal.results[0].provenance_class,'informal_unverified');
+ const regions=await(await req('/regions')).json();assert.equal(regions.results.length,8);assert.equal(regions.results.reduce((n:number,r:any)=>n+r.counties,0),47);
+ const coast=await(await req('/places?kind=county&region=Coast')).json();assert.equal(coast.results.length,6);assert.ok(coast.results.every((r:any)=>r.metadata.region==='Coast'));
  assert.ok(!JSON.stringify(counties).includes('source_listing_id'));assert.ok(!JSON.stringify(detail).includes('price_amount'));
 });
 test('malformed, duplicated and oversized queries are rejected; geography is read-only',async()=>{
@@ -53,6 +57,6 @@ test('source revocation fails closed and the geography budget cannot be bypassed
  const s=(await owner.query("SELECT id FROM atlas_control.sources WHERE driver='kenya_locations'")).rows[0].id;
  try{await owner.query("UPDATE atlas_control.sources SET status='revoked' WHERE id=$1",[s]);assert.equal((await req('/wards?county_code=047')).status,503);}finally{await owner.query("UPDATE atlas_control.sources SET status='active' WHERE id=$1",[s]);}
  const key=createHmac('sha256',secret).update('geography-global').digest('hex');
- await owner.query("INSERT INTO atlas_security.rate_windows(key_hash,window_start,hits) VALUES($1,date_trunc('minute',clock_timestamp()),180) ON CONFLICT(key_hash,window_start) DO UPDATE SET hits=180",[key]);
+ await owner.query("INSERT INTO atlas_security.rate_windows(key_hash,window_start,hits) SELECT $1,date_trunc('minute',now())+n*interval '1 minute',180 FROM generate_series(0,1) n ON CONFLICT(key_hash,window_start) DO UPDATE SET hits=180",[key]);
  const response=await req('/dataset',{headers:{'X-Forwarded-For':'1.2.3.4'}});assert.equal(response.status,429);assert.equal(response.headers.get('retry-after'),'60');
 });

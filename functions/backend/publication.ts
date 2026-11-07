@@ -20,14 +20,17 @@ export const inventorySql = `
 
 export async function publishInTransaction(db: PoolClient, cutoff: string) {
   await db.query("SELECT pg_advisory_xact_lock(hashtext('atlas-market-publication'))");
-  const inventory=await db.query(`WITH inventory AS (${inventorySql}) SELECT count(*)::int n,count(distinct source_id)::int sources FROM inventory`,[cutoff]);
+  // Freeze the eligible inventory once: concurrent source edits cannot make
+  // counters, provenance and segment statistics describe different populations.
+  await db.query(`CREATE TEMP TABLE atlas_publication_inventory ON COMMIT DROP AS ${inventorySql}`,[cutoff]);
+  const inventory=await db.query('SELECT count(*)::int n,count(distinct source_id)::int sources FROM atlas_publication_inventory');
   const {rows:[release]}=await db.query(`INSERT INTO atlas_mart.releases(input_cutoff,listing_count,active_count,source_count)
     VALUES($1,$2,$2,$3) RETURNING id`,[cutoff,inventory.rows[0].n,inventory.rows[0].sources]);
-  await db.query(`WITH inventory AS (${inventorySql}) INSERT INTO atlas_mart.release_sources
-    SELECT $2,source_id FROM inventory GROUP BY source_id`,[cutoff,release.id]);
-  await db.query(`WITH inventory AS (${inventorySql})
+  await db.query(`INSERT INTO atlas_mart.release_sources
+    SELECT $1,source_id FROM atlas_publication_inventory GROUP BY source_id`,[release.id]);
+  await db.query(`WITH inventory AS (SELECT * FROM atlas_publication_inventory)
     INSERT INTO atlas_mart.market_snapshots(release_id,county_id,listing_type,property_type,bedrooms,listing_count,source_count,median_price,p25,p75,mean_price,area_sample_count,median_price_per_sqm,sparse)
-    SELECT $2,county_id,listing_type,property_type,coalesce(bedrooms,-1),count(*)::int,count(distinct source_id)::int,
+    SELECT $1,county_id,listing_type,property_type,coalesce(bedrooms,-1),count(*)::int,count(distinct source_id)::int,
       CASE WHEN count(*)>=30 THEN percentile_cont(0.5) WITHIN GROUP(ORDER BY price_amount) END,
       CASE WHEN count(*)>=30 THEN percentile_cont(0.25) WITHIN GROUP(ORDER BY price_amount) END,
       CASE WHEN count(*)>=30 THEN percentile_cont(0.75) WITHIN GROUP(ORDER BY price_amount) END,
@@ -35,7 +38,7 @@ export async function publishInTransaction(db: PoolClient, cutoff: string) {
       count(floor_area_sqm)::int,
       CASE WHEN count(floor_area_sqm)>=30 THEN percentile_cont(0.5) WITHIN GROUP(ORDER BY price_amount/nullif(floor_area_sqm,0)) END,
       count(*)<30
-    FROM inventory GROUP BY county_id,listing_type,property_type,coalesce(bedrooms,-1)`,[cutoff,release.id]);
+    FROM inventory GROUP BY county_id,listing_type,property_type,coalesce(bedrooms,-1)`,[release.id]);
   await db.query(`INSERT INTO atlas_mart.current_release(singleton,release_id) VALUES(true,$1)
     ON CONFLICT(singleton) DO UPDATE SET release_id=EXCLUDED.release_id`,[release.id]);
   return release.id as string;

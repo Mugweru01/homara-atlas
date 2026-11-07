@@ -31,6 +31,7 @@ export function registerResearch(app:Hono<{Variables:Variables}>,d:Dependencies)
   const f=researchFilters(await c.req.json());
   const {rows}=await d.pool.query(`SELECT l.id county_id,l.name county,m.listing_type,m.property_type,m.bedrooms,m.listing_count,m.source_count,m.median_price,m.p25,m.p75,m.sparse,r.created_at release_at
    FROM atlas_mart.market_snapshots m JOIN atlas_mart.valid_release r ON r.id=m.release_id JOIN atlas_core.locations l ON l.id=m.county_id
+   JOIN atlas_control.sources s ON s.id=l.source_id AND s.status='active' AND s.publication_allowed AND(s.rights_expire_at IS NULL OR s.rights_expire_at>now())
    WHERE l.id=ANY($1::uuid[]) AND m.listing_type=$2 AND($3::text IS NULL OR m.property_type=$3) AND($4::int IS NULL OR m.bedrooms=$4)
    ORDER BY l.name,m.property_type,m.bedrooms LIMIT 200`,[f.county_ids,f.listing_type,f.property_type,f.bedrooms]);
   return c.json({results:rows,filters:f,methodology:'asking-market/1',notice:'Segments remain separate. Missing estimates are null; asking prices are not achieved transaction prices.'});
@@ -60,7 +61,8 @@ export function registerResearch(app:Hono<{Variables:Variables}>,d:Dependencies)
  app.get('/api/v1/admin/me',c=>c.json({role:c.get('operatorRole')}));
  app.post('/api/v1/admin/validate-listings',async c=>{
   const envelope=validateManualEnvelope(await c.req.json()),issues:{index:number;code:string}[]=[];
-  for(let i=0;i<envelope.records.length;i++){try{listing(envelope.records[i]);}catch(error){issues.push({index:i+1,code:error instanceof InputError?error.code:'invalid_record'});}}
+  const counties=new Set((await d.pool.query("SELECT id FROM atlas_core.locations WHERE kind='county'")).rows.map(r=>r.id));
+  for(let i=0;i<envelope.records.length;i++){try{const v=listing(envelope.records[i]);if(!counties.has(v.county_id))throw new InputError('unknown_county');}catch(error){issues.push({index:i+1,code:error instanceof InputError?error.code:'invalid_record'});}}
   return c.json({received:envelope.records.length,valid:envelope.records.length-issues.length,issues,notice:'Preview only. Nothing has been queued or stored.'});
  });
  app.patch('/api/v1/admin/sources/:id/display-permission',async c=>{

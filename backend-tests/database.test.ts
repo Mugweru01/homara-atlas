@@ -9,6 +9,7 @@ import { publish } from '../functions/backend/publication.js';
 import type { Storage } from '../functions/backend/storage.js';
 import { createWorker } from '../functions/backend/worker-app.js';
 import { rateLimit } from '../functions/backend/security.js';
+import {CrawlHttpError} from '../functions/backend/crawl-http.js';
 
 if(process.env.NEON_BRANCH!=='codex-backend-validation')throw new Error('Database tests require the isolated codex-backend-validation branch');
 const makePool=(url:string|undefined)=>new Pool({connectionString:url?.replace('sslmode=require','sslmode=verify-full'),max:3});
@@ -53,12 +54,21 @@ test('Homara connector writes source-scoped observations and bathrooms; an empty
   await assert.rejects(owner.query('UPDATE atlas_control.sources SET publication_allowed=true WHERE id=$1',[s.id]),{code:'23514'});
   const publicHealth=JSON.stringify(await (await req('/api/v1/system/data-health')).json());assert.ok(!publicHealth.includes(s.slug));
   assert.equal((await api.query('SELECT id FROM atlas_control.artifacts WHERE source_id=$1',[s.id])).rowCount,0);
+  assert.equal((await(await req('/api/v1/listings?county_id='+county)).json()).results.length,0);
+  assert.ok(!JSON.stringify(await(await req('/api/v1/collection/sources')).json()).includes(s.slug));
   await transaction(api,db=>enqueue(db,s,randomUUID(),null,actor));const empty=await claim(worker);assert.ok(empty);
   const emptyResult=await processJob(worker,storage,empty,async()=>new Response(JSON.stringify({...payload,records:[]})));assert.equal(emptyResult.status,'succeeded');assert.equal(emptyResult.received,0);
   await assert.rejects(transaction(api,db=>enqueue(db,s,randomUUID(),{records:[]},actor)),/connector_payload_not_allowed/);
  }finally{if(previous===undefined)delete process.env.ATLAS_HOMARA_PUBLIC_KEY;else process.env.ATLAS_HOMARA_PUBLIC_KEY=previous;}
 });
 async function queue(payload:unknown,key=randomUUID()) {return transaction(api,db=>enqueue(db,source,key,payload,actor));}
+test('canonical URL reuse with a changed advert ID is quarantined instead of duplicating a listing',async()=>{
+ const first=record('canonical-'+salt),url=first.source_url;
+ await queue({records:[first]});assert.equal((await runOne(worker,storage))?.accepted,1);
+ await queue({records:[{...record('relisted-'+salt),source_url:url}]});const conflict=await runOne(worker,storage);assert.equal(conflict?.status,'blocked');assert.equal(conflict?.rejected,1);
+ assert.equal((await owner.query('SELECT count(*)::int n FROM atlas_core.source_listings WHERE source_id=$1 AND source_listing_id=$2',[source.id,'relisted-'+salt])).rows[0].n,0);
+ await assert.rejects(worker.query('UPDATE atlas_core.source_listings SET source_listing_id=$2 WHERE source_id=$1',[source.id,'changed']),{code:'42501'});
+});
 test('database roles cannot mutate evidence, grant privileges or bypass report ownership',async()=>{
  await assert.rejects(api.query("UPDATE atlas_core.listing_observations SET availability='sold'"),{code:'42501'});
  await assert.rejects(worker.query("DELETE FROM atlas_core.listing_observations"),{code:'42501'});

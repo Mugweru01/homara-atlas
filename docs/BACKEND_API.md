@@ -7,6 +7,11 @@ All routes below use `/api/v1`. Protected routes require a Managed Auth bearer J
 | GET `/system/health`, `/system/ready`, `/system/data-health` | Public | Liveness, DB readiness, independent source freshness |
 | GET `/sources`, `/geography/counties` | Public | Attribution and county IDs/vintage |
 | GET `/geography/dataset`, `/geography/openapi.json` | Public | Pinned location provenance and machine-readable contract |
+| GET `/geography/regions` | Public | Eight historical province groups; place lists/search accept `region` |
+| GET `/listings` | Public | Separately approved public advertisements only; county_id/listing_type/property_type and bounded pagination |
+| GET `/research/benchmarks` | Public | Licensed publisher market statistics; market_type/county and pagination; not individual listings |
+| GET `/collection/sources` | Public | Reviewed public-source decisions and approved collector status; confidential feeds excluded |
+| POST `/collector/kpc`, GET `/collector/kpc/jobs/:id` | Source-scoped collector bearer token | Fixed licensed market-statistics source only; strict envelope, bounded queue, no arbitrary source/job access; see [collection runbook](DAILY_COLLECTION.md) |
 | GET `/geography/places`, `/geography/constituencies`, `/geography/wards`, `/geography/sub-counties`, `/geography/localities`, `/geography/areas` | Public | Read-only place references; county_code, constituency_code, parent_id, bounded pagination |
 | GET `/geography/search`, `/geography/places/:id` | Public | Literal name/alias search and place/parent detail; attribution included |
 | GET `/context/indicators` | Public | Latest annual revisions; optional `code`, pagination |

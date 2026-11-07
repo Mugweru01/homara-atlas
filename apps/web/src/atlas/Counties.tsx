@@ -103,6 +103,30 @@ export default function Counties() {
           {county && (
             <>
               <dl className="detail-list">
+                {county.code && (
+                  <div>
+                    <dt>County code</dt>
+                    <dd>{county.code}</dd>
+                  </div>
+                )}
+                {county.metadata?.region && (
+                  <div>
+                    <dt>Region (former province)</dt>
+                    <dd>{county.metadata.region}</dd>
+                  </div>
+                )}
+                {county.metadata?.capital && (
+                  <div>
+                    <dt>County capital</dt>
+                    <dd>{county.metadata.capital}</dd>
+                  </div>
+                )}
+                {county.metadata?.population_2019 && (
+                  <div>
+                    <dt>Population · 2019 census</dt>
+                    <dd>{county.metadata.population_2019.toLocaleString()}</dd>
+                  </div>
+                )}
                 <div>
                   <dt>Geographic level</dt>
                   <dd>County · ADM1</dd>
@@ -120,6 +144,11 @@ export default function Counties() {
                   <dd>geoBoundaries</dd>
                 </div>
               </dl>
+              {county.code && (
+                <Link className="button secondary" to={`/locations?county_code=${county.code}`}>
+                  Explore constituencies, wards and places <ArrowRight size={16} />
+                </Link>
+              )}
               <Link
                 className="button primary"
                 to={`/market?county=${encodeURIComponent(county.name)}`}

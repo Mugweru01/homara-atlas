@@ -13,10 +13,12 @@ import { enqueue, type Source } from './ingestion.js';
 import type { Storage } from './storage.js';
 import { registerResearch } from './research.js';
 import { registerGeography } from './geography.js';
+import {registerCatalog} from './catalog.js';
+import {registerSourcePush} from './source-push.js';
 
 export type Dependencies={
  pool:Pool; storage:Storage; verify:(token:string)=>Promise<Principal>; rateSecret:string;
- origins:string[]; seal:(userId:string)=>Promise<unknown>; kick?:()=>void;
+ origins:string[]; seal:(userId:string)=>Promise<unknown>; kick?:()=>void;collectorToken?:string;
 };
 export type Variables={requestId:string;principal:Principal;operatorRole:string};
 export function createApp(d:Dependencies) {
@@ -39,7 +41,7 @@ export function createApp(d:Dependencies) {
  });
  app.notFound(c=>c.json({error:'not_found',request_id:c.get('requestId')},404));
  app.use('/api/*',async(c,next)=>{
-  if(c.req.method==='OPTIONS'||c.req.path==='/api/v1/system/health')return next();
+  if(c.req.method==='OPTIONS'||c.req.path==='/api/v1/system/health'||c.req.path==='/api/v1/collector/kpc'||c.req.path.startsWith('/api/v1/collector/kpc/'))return next();
   // Global public budgets cannot be bypassed by spoofing client-IP headers.
   await rateLimit(d.pool,d.rateSecret,'api-global',600);await next();
  });
@@ -51,7 +53,9 @@ export function createApp(d:Dependencies) {
  });
  app.get('/api/v1/system/data-health',async c=>{
   const {rows}=await d.pool.query(`SELECT slug,data_kind,status,last_success_at,
-   (last_success_at IS NULL OR (driver<>'kenya_locations' AND last_success_at<now()-make_interval(secs=>refresh_seconds*2))) AS stale
+   (status<>'active' OR (rights_expire_at IS NOT NULL AND rights_expire_at<=now()) OR last_success_at IS NULL
+    OR (driver='kenya_locations' AND NOT EXISTS(SELECT 1 FROM atlas_geo.published_release))
+    OR (driver<>'kenya_locations' AND last_success_at<now()-make_interval(secs=>refresh_seconds*2))) AS stale
    FROM atlas_control.sources WHERE driver NOT IN ('manual_listings','homara_public') ORDER BY slug`);
   return c.json({status:rows.some(r=>r.stale)?'degraded':'current',sources:rows});
  });
@@ -63,6 +67,7 @@ export function createApp(d:Dependencies) {
   return c.json({results:rows});
  });
  registerGeography(app,d);
+ registerSourcePush(app,d);
  app.get('/api/v1/context/indicators',async c=>{
   const {limit,offset}=pagination(c.req.query());
   const code=c.req.query('code')||null;if(code&&!/^[A-Z0-9_.]{3,40}$/.test(code))throw new InputError('invalid_indicator_code');
@@ -233,5 +238,6 @@ export function createApp(d:Dependencies) {
   admin(c.get('operatorRole'));const {limit,offset}=pagination(c.req.query());return c.json({results:(await d.pool.query('SELECT id,actor_id,action,resource_id,details,created_at FROM atlas_control.audit_events ORDER BY created_at DESC LIMIT $1 OFFSET $2',[limit,offset])).rows,limit,offset});
  });
  registerResearch(app,d);
+ registerCatalog(app,d);
  return app;
 }
