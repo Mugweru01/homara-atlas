@@ -20,7 +20,7 @@ export function parseWebListings(html:string,url:string,config:Config,counties:{
    const category=String(item.category||types[0]).toLowerCase(),property_type=/apartment|flat/.test(category)?'apartment':/house|residence/.test(category)?'house':/landparcel|land/.test(category)?'land':/office/.test(category)?'office':/retail/.test(category)?'retail':/warehouse/.test(category)?'warehouse':null;if(!property_type)throw Error('unmapped_property_type');
    const specification=offer.priceSpecification&&typeof offer.priceSpecification==='object'?object(offer.priceSpecification):{};
    if(config.listing_type==='rent'&&!['MON','month','monthly','MONTH'].includes(String(specification.unitCode||specification.unitText)))throw Error('unconfirmed_rent_period');
-   const state=String(offer.availability||'InStock').replace(/^https?:\/\/schema\.org\//,''),availability=state==='InStock'?'active':['OutOfStock','SoldOut','Discontinued'].includes(state)?'withdrawn':'unknown';
+   const state=String(offer.availability||'').replace(/^https?:\/\/schema\.org\//,''),availability=state==='InStock'?'active':['OutOfStock','SoldOut','Discontinued'].includes(state)?'withdrawn':'unknown';
    const floor=item.floorSize&&typeof item.floorSize==='object'?object(item.floorSize):{},area=number(floor.value),unit=String(floor.unitCode||floor.unitText||'').toLowerCase();
    const bedrooms=number(item.numberOfBedrooms),bathrooms=number(item.numberOfBathroomsTotal);
    records.push(listing({source_listing_id:id,source_url:canonical.href,observed_at:observed,listing_type:config.listing_type,property_type,county_id:uuid(county.id),bedrooms,bathrooms,price_amount:number(offer.price??specification.price),currency:offer.priceCurrency??specification.priceCurrency,rent_period:config.listing_type==='rent'?'month':null,floor_area_sqm:property_type!=='land'&&area&&['mtk','sqm','m2'].includes(unit)?area:null,availability,status_evidence:'advertisement'}));
@@ -42,7 +42,7 @@ export async function downloadListingWeb(pool:Pool,source:{id:string;watermark:R
  for(let page=0;queue.length&&page<config.max_pages;page++){
   const raw=queue.shift()!,url=crawlUrl(raw,config.origin,[config.path_prefix],hosts);if(seen.has(url.href)){page--;continue;}
   if(!robotsAllowed(robots.text,url.pathname+url.search))throw Error('source_robots_disallowed');
-  const document=await crawlText(url.href,config.origin,[config.path_prefix],hosts,signal);await heartbeat();seen.add(url.href);evidence.push({url:url.href,sha256:document.sha256});
+  const document=await crawlText(url.href,config.origin,[config.path_prefix],hosts,signal,u=>robotsAllowed(robots.text,u.pathname+u.search));await heartbeat();seen.add(url.href);evidence.push({url:url.href,sha256:document.sha256});
   const parsed=parseWebListings(document.text,document.url,config,counties,new Date().toISOString());
   confirmedEmpty ||= jsonLd(document.text).some(v=>v&&typeof v==='object'&&!Array.isArray(v)&&(v as Record<string,unknown>)['@type']==='ItemList'&&(v as Record<string,unknown>).numberOfItems===0);
   for(const record of parsed.records){crawlUrl(record.source_url,config.origin,[config.path_prefix],hosts);records.push(record);}issues.push(...parsed.issues);

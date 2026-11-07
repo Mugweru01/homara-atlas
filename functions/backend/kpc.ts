@@ -36,8 +36,9 @@ export function parseKpc(html:string){
 export async function downloadKpc():Promise<Download>{
  const signal=AbortSignal.timeout(90000),hosts=['kenyapropertycentre.com'],paths=[kpcPath,'/robots.txt','/terms-of-use'];
  const robots=await crawlText(kpcOrigin+'/robots.txt',kpcOrigin,paths,hosts,signal);if(!robotsAllowed(robots.text,kpcPath)||!robotsAllowed(robots.text,'/terms-of-use'))throw Error('source_robots_disallowed');
- const terms=await crawlText(kpcOrigin+'/terms-of-use',kpcOrigin,paths,hosts,signal);if(!terms.text.includes('creativecommons.org/licenses/by/4.0')||!terms.text.includes('Market Data')||!terms.text.includes('automated software at a reasonable rate'))throw Error('source_license_or_schema_changed');
- const page=await crawlText(kpcOrigin+kpcPath,kpcOrigin,paths,hosts,signal),records=parseKpc(page.text);
+ const allowed=(u:URL)=>robotsAllowed(robots.text,u.pathname+u.search);
+ const terms=await crawlText(kpcOrigin+'/terms-of-use',kpcOrigin,paths,hosts,signal,allowed);if(!terms.text.includes('creativecommons.org/licenses/by/4.0')||!terms.text.includes('Market Data')||!terms.text.includes('automated software at a reasonable rate'))throw Error('source_license_or_schema_changed');
+ const page=await crawlText(kpcOrigin+kpcPath,kpcOrigin,paths,hosts,signal,allowed),records=parseKpc(page.text);
  const value={records,evidence:{parser:'kpc-market/1',document_sha256:page.sha256,robots_sha256:robots.sha256,terms_sha256:terms.sha256,scope:'Published CC BY 4.0 market statistics only; no listing or customer data.'}};
  return {url:page.url,value,bytes:Buffer.from(JSON.stringify(value))};
 }

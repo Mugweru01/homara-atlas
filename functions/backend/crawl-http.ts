@@ -22,9 +22,10 @@ export function crawlUrl(raw:string,origin:string,prefixes:string[],hosts:string
  if(u.protocol!=='https:'||u.origin!==base.origin||u.username||u.password||u.port||isIP(u.hostname.replace(/[\[\]]/g,''))||!hosts.includes(u.hostname)||u.hostname.endsWith('.')||/%(?:2f|5c)/i.test(u.pathname)||u.href.length>2000||[...u.searchParams.keys()].some(k=>/token|auth|session|email|password|api.?key/i.test(k))||!prefixes.some(p=>u.pathname===p||u.pathname.startsWith(p.endsWith('/')?p:p+'/')))throw Error('source_unsafe_url');
  u.hash='';return u;
 }
-export async function crawlText(raw:string,origin:string,prefixes:string[],hosts:string[],signal?:AbortSignal):Promise<{text:string;url:string;sha256:string}>{
+export async function crawlText(raw:string,origin:string,prefixes:string[],hosts:string[],signal?:AbortSignal,allowed?:(url:URL)=>boolean):Promise<{text:string;url:string;sha256:string}>{
  let u=crawlUrl(raw,origin,prefixes,hosts);
  for(let hops=0;hops<3;hops++){
+  if(allowed&&!allowed(u))throw Error('source_robots_disallowed');
   const result=await new Promise<{status:number;location?:string;bytes:Buffer;encoding?:string;retryAfter?:string}>((resolve,reject)=>{
    const request=https.get(u,{signal,headers:{'User-Agent':`${crawlerAgent}/1.0 (+https://homara-atlas.vercel.app/sources)`,'Accept':'text/html,text/plain,application/json','Accept-Encoding':'identity'},lookup:publicLookup},response=>{
     const chunks:Buffer[]=[];let size=0;response.on('data',(part:Buffer)=>{size+=part.length;if(size>2*1024*1024){request.destroy(Error('upstream_too_large'));return;}chunks.push(part);});

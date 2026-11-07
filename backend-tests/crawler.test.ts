@@ -1,5 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';
-import {publicAddress,crawlUrl,robotsAllowed,jsonLd,htmlReferences} from '../functions/backend/crawl-http.js';
+import {publicAddress,crawlUrl,crawlText,robotsAllowed,jsonLd,htmlReferences} from '../functions/backend/crawl-http.js';
 import {parseWebListings} from '../functions/backend/listing-crawler.js';
 import {parseKpc,kpcOrigin,kpcPath} from '../functions/backend/kpc.js';
 const county='00000000-0000-4000-8000-000000000001';
@@ -13,9 +13,10 @@ test('crawl network guards deny private/reserved addresses and out-of-scope URLs
  assert.throws(()=>crawlUrl(product.url,config.origin,[config.path_prefix],[]));assert.equal(crawlUrl(product.url,config.origin,[config.path_prefix],['agency.example']).hostname,'agency.example');
  assert.throws(()=>crawlUrl('https://[::1]/properties','https://[::1]',['/properties'],['[::1]']));assert.equal(publicAddress('168.63.129.16'),false);
 });
-test('robots rules apply before crawling, with specific agents, wildcard paths and Allow tie breaks',()=>{
+test('robots rules apply before crawling, with specific agents, wildcard paths and Allow tie breaks',async()=>{
  const robots='User-agent: OtherBot\nDisallow: /\nUser-agent: *\nDisallow: /properties/private\nAllow: /properties/private/public\nDisallow: *token=*\n';
  assert.equal(robotsAllowed(robots,'/properties/42'),true);assert.equal(robotsAllowed(robots,'/properties/private/42'),false);assert.equal(robotsAllowed(robots,'/properties/private/public/42'),true);assert.equal(robotsAllowed(robots,'/properties/42?token=x'),false);assert.equal(robotsAllowed(robots,'/properties/42','OtherBot'),false);
+ await assert.rejects(crawlText('https://agency.example/properties/private/42',config.origin,[config.path_prefix],['agency.example'],undefined,u=>robotsAllowed(robots,u.pathname)),/source_robots_disallowed/);
 });
 test('HTML parser never executes scripts; listing extraction discards contacts, images, descriptions and addresses',()=>{
  const parsed=parseWebListings('<script>throw new Error("never execute")</script>'+html(product),product.url,config,[{id:county,name:'Nairobi'}],new Date().toISOString());
@@ -24,6 +25,7 @@ test('HTML parser never executes scripts; listing extraction discards contacts, 
  assert.equal(parseWebListings(html({...product,offers:{...product.offers,priceSpecification:{unitCode:'DAY'}}}),product.url,config,[{id:county,name:'Nairobi'}],new Date().toISOString()).issues[0],'unconfirmed_rent_period');
  assert.throws(()=>jsonLd(html({})+html('{not json').replace('"{not json"','{not json')),/invalid_jsonld/);
  assert.equal(htmlReferences('<a href="/properties?page=2&amp;sort=price">next</a>').links[0],'/properties?page=2&sort=price');
+ assert.equal(parseWebListings(html({...product,offers:{...product.offers,availability:undefined}}),product.url,config,[{id:county,name:'Nairobi'}],new Date().toISOString()).records[0].availability,'unknown');
 });
 const dataset=(type:string,value:number)=>({'@type':'Dataset',url:kpcOrigin+kpcPath+'/'+type,creator:{name:'Kenya Property Centre'},license:'https://creativecommons.org/licenses/by/4.0/',temporalCoverage:'2026-09-01/2026-10-31',measurementTechnique:'Publisher monthly asking-price method, not completed transactions.',variableMeasured:[{unitText:'KES',value}]});
 test('licensed report parser preserves reference month, exact numbers and scope; schema/licence changes block ingestion',()=>{
