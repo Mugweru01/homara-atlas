@@ -9,7 +9,6 @@ import { publish } from '../functions/backend/publication.js';
 import type { Storage } from '../functions/backend/storage.js';
 import { createWorker } from '../functions/backend/worker-app.js';
 import { rateLimit } from '../functions/backend/security.js';
-import {CrawlHttpError} from '../functions/backend/crawl-http.js';
 
 if(process.env.NEON_BRANCH!=='codex-backend-validation')throw new Error('Database tests require the isolated codex-backend-validation branch');
 const makePool=(url:string|undefined)=>new Pool({connectionString:url?.replace('sslmode=require','sslmode=verify-full'),max:3});

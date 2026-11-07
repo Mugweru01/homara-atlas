@@ -1,5 +1,4 @@
 import type {Pool} from 'pg';
-import {createHash} from 'node:crypto';
 import {crawlText,crawlUrl,robotsAllowed,jsonLd,htmlReferences} from './crawl-http.js';
 import {object,listing,uuid} from './validation.js';
 import type {Download} from './connectors.js';
