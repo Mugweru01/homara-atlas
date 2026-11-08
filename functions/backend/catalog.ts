@@ -1,8 +1,7 @@
 import type {Hono} from 'hono';
 import type {Dependencies,Variables} from './app.js';
-import {inventorySql} from './publication.js';
 import {locationQuery} from './geography.js';
-import {pagination,oneOf,uuid,text} from './validation.js';
+import {pagination,oneOf,text} from './validation.js';
 export function registerCatalog(app:Hono<{Variables:Variables}>,d:Dependencies){
  app.get('/api/v1/collection/sources',async c=>{
   locationQuery(c.req.url,[]);
@@ -25,14 +24,5 @@ export function registerCatalog(app:Hono<{Variables:Variables}>,d:Dependencies){
    ORDER BY geography,market_type LIMIT $3 OFFSET $4`,[type,county,limit,offset]);
   return c.json({results:rows,limit,offset,notice:'Publisher-reported market benchmarks, not individual property listings, Atlas-derived estimates, achieved transactions or a daily price series. Collection is daily; the publisher releases monthly figures. Samples and methodologies differ.'});
  });
- app.get('/api/v1/listings',async c=>{
-  const q=locationQuery(c.req.url,['county_id','listing_type','property_type','limit','offset']),{limit,offset}=pagination(q),county=q.county_id!==undefined?uuid(q.county_id):null,type=q.listing_type!==undefined?oneOf(q.listing_type,['rent','sale']):null,property=q.property_type!==undefined?oneOf(q.property_type,['apartment','house','land','office','retail','warehouse']):null;
-  const cutoff=(await d.pool.query('SELECT clock_timestamp() time')).rows[0].time.toISOString();
-  const {rows}=await d.pool.query(`WITH inventory AS(${inventorySql}) SELECT i.id,i.source_url,i.observed_at,i.listing_type,i.property_type,i.bedrooms,i.bathrooms,i.price_amount,i.currency,i.rent_period,i.floor_area_sqm,l.name county,s.name source,s.attribution
-   FROM inventory i JOIN atlas_control.sources s ON s.id=i.source_id AND s.listing_details_allowed
-   JOIN atlas_core.locations l ON l.id=i.county_id JOIN atlas_control.sources gs ON gs.id=l.source_id AND gs.status='active' AND gs.publication_allowed AND(gs.rights_expire_at IS NULL OR gs.rights_expire_at>now())
-   WHERE($2::uuid IS NULL OR i.county_id=$2) AND($3::text IS NULL OR i.listing_type=$3) AND($4::text IS NULL OR i.property_type=$4)
-   ORDER BY i.observed_at DESC,i.id LIMIT $5 OFFSET $6`,[cutoff,county,type,property,limit+1,offset]);
-  return c.json({results:rows.slice(0,limit),limit,offset,has_more:rows.length>limit,notice:'Only fresh advertisements from sources approved for public listing display. No contacts, customer identities, exact coordinates or confidential feeds.'});
- });
+ app.get('/api/v1/listings',c=>c.json({error:'listing_level_display_retired',notice:'Atlas publishes aggregated research only. Use the research intelligence endpoints.'},410));
 }

@@ -3,7 +3,6 @@ import { HTTPException } from 'hono/http-exception';
 import type { Dependencies, Variables } from './app.js';
 import { transaction } from './db.js';
 import { object,exact,text,uuid,oneOf,InputError,pagination } from './validation.js';
-import { inventorySql } from './publication.js';
 import { listing } from './validation.js';
 import { validateManualEnvelope } from './ingestion.js';
 
@@ -36,14 +35,7 @@ export function registerResearch(app:Hono<{Variables:Variables}>,d:Dependencies)
    ORDER BY l.name,m.property_type,m.bedrooms LIMIT 200`,[f.county_ids,f.listing_type,f.property_type,f.bedrooms]);
   return c.json({results:rows,filters:f,methodology:'asking-market/1',notice:'Segments remain separate. Missing estimates are null; asking prices are not achieved transaction prices.'});
  });
- app.get('/api/v1/research/comparables',async c=>{
-  const {limit,offset}=pagination(c.req.query()),county=uuid(c.req.query('county_id')||''),type=oneOf(c.req.query('listing_type')||'rent',['rent','sale']);
-  const cutoff=(await d.pool.query('SELECT clock_timestamp() AS time')).rows[0].time.toISOString();
-  const {rows}=await d.pool.query(`WITH inventory AS (${inventorySql}) SELECT i.id,i.source_url,i.observed_at,i.property_type,i.bedrooms,i.neighbourhood,i.price_amount,i.rent_period,i.floor_area_sqm,s.name source,s.attribution
-   FROM inventory i JOIN atlas_control.sources s ON s.id=i.source_id WHERE i.county_id=$2 AND i.listing_type=$3 AND s.listing_details_allowed
-   ORDER BY i.observed_at DESC,i.id LIMIT $4 OFFSET $5`,[cutoff,county,type,limit,offset]);
-  return c.json({results:rows,limit,offset,notice:'Only sources explicitly approved for listing-level display appear. No contacts or exact property coordinates are exposed.'});
- });
+ app.get('/api/v1/research/comparables',c=>c.json({error:'listing_level_display_retired',notice:'Use aggregated area comparisons in the research studio.'},410));
  app.get('/api/v1/workspace/research/views',async c=>{
   const user=c.get('principal').id;return c.json({results:await transaction(d.pool,async db=>(await db.query('SELECT id,name,filters,created_at FROM public.atlas_saved_views WHERE owner_id=$1 ORDER BY created_at DESC LIMIT 100',[user])).rows,user)});
  });

@@ -34,6 +34,7 @@ export function createWorker(d:{pool:Pool;storage:Storage;internalToken:string;f
   for(let n=0;n<5;n++){const result=await runOne(d.pool,d.storage,d.fetcher);if(!result)break;results.push(result);}
   const {rows:[current]}=await d.pool.query("SELECT id FROM atlas_mart.valid_release WHERE created_at>now()-interval '6 hours' AND created_at>=coalesce((SELECT requested_at FROM atlas_control.publication_requests WHERE singleton=true),'-infinity'::timestamptz)");
   if(!current)await publish(d.pool);
+  await d.pool.query('SELECT atlas_research.evaluate_watchlists()');
   return {results};
  }
  app.post('/run',async c=>{

@@ -19,7 +19,7 @@ const db=new pg.Client({connectionString:url.toString().replace('sslmode=require
 try{
  await db.connect();await db.query('BEGIN ISOLATION LEVEL REPEATABLE READ READ ONLY');
  const snapshot=(await db.query('SELECT pg_export_snapshot() AS id')).rows[0].id;
- const args=['--format=custom','--no-owner','--schema=atlas_meta','--schema=atlas_control','--schema=atlas_core','--schema=atlas_mart','--schema=atlas_security','--schema=atlas_geo','--schema=public',`--snapshot=${snapshot}`];
+  const args=['--format=custom','--no-owner','--schema=atlas_meta','--schema=atlas_control','--schema=atlas_core','--schema=atlas_mart','--schema=atlas_security','--schema=atlas_geo','--schema=atlas_research','--schema=public',`--snapshot=${snapshot}`];
  const dump=await new Promise((resolve,reject)=>{
   const child=spawn('pg_dump',args,{env,stdio:['ignore','pipe','pipe']}),chunks=[];let size=0;let failure='';
   child.stdout.on('data',b=>{size+=b.length;if(size>128*1024*1024){child.kill();reject(new Error('backup_budget_exceeded'));}else chunks.push(b);});

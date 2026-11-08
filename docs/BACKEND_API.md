@@ -8,9 +8,14 @@ All routes below use `/api/v1`. Protected routes require a Managed Auth bearer J
 | GET `/sources`, `/geography/counties` | Public | Attribution and county IDs/vintage |
 | GET `/geography/dataset`, `/geography/openapi.json` | Public | Pinned location provenance and machine-readable contract |
 | GET `/geography/regions` | Public | Eight historical province groups; place lists/search accept `region` |
-| GET `/listings` | Public | Separately approved public advertisements only; county_id/listing_type/property_type and bounded pagination |
+| GET `/listings`, `/research/comparables` | Retired, HTTP 410 | Research-only product; listing-level display cannot be enabled by a source flag |
 | GET `/research/benchmarks` | Public | Licensed publisher market statistics; market_type/county and pagination; not individual listings |
 | GET `/collection/sources` | Public | Reviewed public-source decisions and approved collector status; confidential feeds excluded |
+| GET `/research/intelligence/evidence`, `/research/intelligence/liquidity` | Public | Bounded county comparisons, captured monthly history and suppressed activity; see [Research studio contract](RESEARCH_STUDIO.md) |
+| POST `/research/intelligence/scenario` | Public | Validated investment assumptions and fixed-rate amortisation/cash-flow arithmetic |
+| GET `/research/intelligence/amenities`, `/research/intelligence/amenities/export`, `/research/intelligence/projects` | Public | Rights-gated facility points, attributed open-data extract and dated official milestones |
+| GET, POST `/workspace/research/items`, `/workspace/research/watchlists` | Signed-in user | Own frozen research snapshots, optional scenario assumptions, watchlists and in-app alerts; strict payloads and quotas |
+| DELETE `/workspace/research/items/:id`, `/workspace/research/watchlists/:id` | Owner | Delete own research or watch and associated notifications; other-owner IDs return 404 |
 | POST `/collector/kpc`, GET `/collector/kpc/jobs/:id` | Source-scoped collector bearer token | Fixed licensed market-statistics source only; strict envelope, bounded queue, no arbitrary source/job access; see [collection runbook](DAILY_COLLECTION.md) |
 | GET `/geography/places`, `/geography/constituencies`, `/geography/wards`, `/geography/sub-counties`, `/geography/localities`, `/geography/areas` | Public | Read-only place references; county_code, constituency_code, parent_id, bounded pagination |
 | GET `/geography/search`, `/geography/places/:id` | Public | Literal name/alias search and place/parent detail; attribution included |

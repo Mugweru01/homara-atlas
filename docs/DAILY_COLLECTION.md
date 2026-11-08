@@ -1,5 +1,13 @@
 # Daily collection, public inventory and duplicate control
 
+**Superseding product direction, 8 November 2026:** Atlas now publishes aggregate
+research only. The former listing page redirects to Research studio confidence;
+listing/comparable-detail JSON routes return 410. Source approvals still govern
+private collection, while only permitted aggregates can inform public research.
+The KPC collector remains paused. GeoNames facility context is a separately
+licensed reviewed download, not property advertisements. See [Research studio](RESEARCH_STUDIO.md).
+References to the earlier public inventory UI below describe the prior milestone.
+
 ## Current boundaries
 
 **Operational status, 7 November 2026:** the GitHub runner also received HTTP 403

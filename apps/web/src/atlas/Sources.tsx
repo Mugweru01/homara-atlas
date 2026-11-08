@@ -86,40 +86,52 @@ export default function Sources() {
                       <span>
                         {short(s)}
                         <small>
-                          {s.slug === 'kenya-locations'
-                            ? 'David Amunga and contributors'
-                            : s.slug === 'kpc-market-statistics'
-                              ? 'Published market benchmarks'
-                              : s.data_kind === 'geography'
-                                ? 'Administrative boundaries'
-                                : s.data_kind === 'context'
-                                  ? 'World Development Indicators'
-                                  : 'Approved listing feed'}
+                          {s.driver === 'reviewed_research'
+                            ? 'Reviewed public context'
+                            : s.slug === 'kenya-locations'
+                              ? 'David Amunga and contributors'
+                              : s.slug === 'kpc-market-statistics'
+                                ? 'Published market benchmarks'
+                                : s.data_kind === 'geography'
+                                  ? 'Administrative boundaries'
+                                  : s.data_kind === 'context'
+                                    ? s.slug === 'worldbank-wdi-ken'
+                                      ? 'World Development Indicators'
+                                      : 'Published context'
+                                    : 'Approved listing feed'}
                         </small>
                       </span>
                     </button>
                   </td>
                   <td>
-                    {s.slug === 'kenya-locations'
-                      ? 'Counties, wards and place names'
-                      : s.slug === 'kpc-market-statistics'
-                        ? 'Monthly rent, sale and short-let statistics'
-                        : s.data_kind === 'geography'
-                          ? 'Kenya counties'
-                          : s.data_kind === 'context'
-                            ? 'Kenya national context'
-                            : 'Property listings'}
+                    {s.slug === 'geonames-kenya-amenities'
+                      ? 'Kenya facility gazetteer'
+                      : s.slug === 'official-project-milestones'
+                        ? 'Dated Nairobi transport milestones'
+                        : s.slug === 'osm-nairobi-amenities'
+                          ? 'Nairobi amenity pilot'
+                          : s.slug === 'kenya-locations'
+                            ? 'Counties, wards and place names'
+                            : s.slug === 'kpc-market-statistics'
+                              ? 'Monthly rent, sale and short-let statistics'
+                              : s.data_kind === 'geography'
+                                ? 'Kenya counties'
+                                : s.data_kind === 'context'
+                                  ? 'Kenya national context'
+                                  : 'Property observations'}
                   </td>
                   <td>{date(s.last_success_at)}</td>
                   <td>
                     <Status
                       muted={health.data?.sources.find((h) => h.slug === s.slug)?.stale !== false}
                     >
-                      {s.slug === 'kenya-locations'
-                        ? 'Pinned release'
-                        : health.data?.sources.find((h) => h.slug === s.slug)?.stale === false
-                          ? 'Current'
-                          : 'Check freshness'}
+                      {s.driver === 'reviewed_research'
+                        ? 'Dated reference'
+                        : s.slug === 'kenya-locations'
+                          ? 'Pinned release'
+                          : health.data?.sources.find((h) => h.slug === s.slug)?.stale === false
+                            ? 'Current'
+                            : 'Check freshness'}
                     </Status>
                   </td>
                   <td>
@@ -223,15 +235,17 @@ export default function Sources() {
                 <div>
                   <dt>Refresh schedule</dt>
                   <dd>
-                    {source.slug === 'kenya-locations'
-                      ? 'Reviewed, versioned imports'
-                      : source.slug === 'kpc-market-statistics'
-                        ? 'Monthly publisher figures; see collection status'
-                        : source.data_kind === 'geography'
-                          ? 'Weekly'
-                          : source.data_kind === 'context'
-                            ? 'Daily'
-                            : 'Operator submitted'}
+                    {source.driver === 'reviewed_research'
+                      ? 'Reviewed owner imports'
+                      : source.slug === 'kenya-locations'
+                        ? 'Reviewed, versioned imports'
+                        : source.slug === 'kpc-market-statistics'
+                          ? 'Monthly publisher figures; see collection status'
+                          : source.data_kind === 'geography'
+                            ? 'Weekly'
+                            : source.data_kind === 'context'
+                              ? 'Daily'
+                              : 'Operator submitted'}
                   </dd>
                 </div>
                 <div>

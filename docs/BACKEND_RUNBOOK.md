@@ -1,5 +1,12 @@
 # Atlas backend and database
 
+Current research milestone (8 November 2026): see [Research studio operations](RESEARCH_STUDIO.md)
+for migrations 019–020, saved snapshots, in-app watchlists, facility imports,
+documentary project milestones and the research-only publication boundary.
+The former listing-detail/comparable endpoints now return 410. GeoNames adds
+1,527 attributed facility references across 41 counties; the property collector
+remains paused. Older milestone evidence below is retained with its original date.
+
 This backend milestone supersedes the older importer and warehouse instructions in NEON_READINESS.md. No files under apps/web were changed during this milestone. AI inference is disabled; no paid upgrade was made.
 
 ## Architecture and evidence

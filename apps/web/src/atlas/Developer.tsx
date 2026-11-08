@@ -75,8 +75,8 @@ export default function Developer() {
                   'Historical province groupings; location lists accept region filters',
                 ],
                 [
-                  '/listings',
-                  'Only approved public advertisements; county_id, listing_type, property_type, limit, offset',
+                  '/research/intelligence/evidence',
+                  'Aggregate county evidence, captured monthly history, source confidence; county_ids and market_type',
                 ],
                 [
                   '/research/benchmarks',
