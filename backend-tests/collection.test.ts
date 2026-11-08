@@ -11,13 +11,12 @@ async function makeSource(driver:string){return(await owner.query(`INSERT INTO a
  VALUES($1,'Controlled public collection test',$2,$3,'active','Test','https://example.test/permission','Synthetic fixture',now(),'test-owner',true,now()+interval '1 day') RETURNING *`,['collection-'+randomUUID(),driver,driver==='manual_listings'?'listings':'context'])).rows[0];}
 before(async()=>{await owner.query("UPDATE atlas_control.sources SET next_run_at=now()+interval '1 day' WHERE driver<>'manual_listings'");source=await makeSource('manual_listings');county=(await owner.query("INSERT INTO atlas_core.locations(source_id,source_key,name,kind) VALUES($1,'collection-county','Collection County','county') RETURNING id",[source.id])).rows[0].id;});
 after(async()=>{await owner.end();await api.end();await worker.end();});
-test('public listings require distinct publication/display permission and expose only the approved projection',async()=>{
+test('research-only product retires listing display even when a source has detail permission',async()=>{
  const record={source_listing_id:'fixture-ad',source_url:'https://example.test/properties/fixture',observed_at:new Date().toISOString(),listing_type:'rent',property_type:'apartment',county_id:county,bedrooms:1,price_amount:10000,currency:'KES',rent_period:'month',availability:'active',status_evidence:'advertisement'};
  await transaction(api,db=>enqueue(db,source,randomUUID(),{records:[record]},'test-owner'));assert.equal((await runOne(worker,storage))?.accepted,1);
- assert.equal((await(await req('/listings?county_id='+county)).json()).results.length,0);
- await owner.query('UPDATE atlas_control.sources SET listing_details_allowed=true WHERE id=$1',[source.id]);const displayed=await(await req('/listings?county_id='+county)).json();assert.equal(displayed.results.length,1);assert.equal(displayed.results[0].price_amount,'10000.00');assert.ok(!Object.hasOwn(displayed.results[0],'source_listing_id'));assert.ok(!Object.hasOwn(displayed.results[0],'owner_id'));
- assert.equal((await req('/listings?source_id='+source.id)).status,400);
- await owner.query("UPDATE atlas_control.sources SET status='revoked' WHERE id=$1",[source.id]);assert.equal((await(await req('/listings?county_id='+county)).json()).results.length,0);
+ assert.equal((await req('/listings?county_id='+county)).status,410);
+ await owner.query('UPDATE atlas_control.sources SET listing_details_allowed=true WHERE id=$1',[source.id]);assert.equal((await req('/listings?county_id='+county)).status,410);assert.equal((await req('/research/comparables?county_id='+county)).status,410);
+ await owner.query("UPDATE atlas_control.sources SET status='revoked' WHERE id=$1",[source.id]);assert.equal((await req('/listings?county_id='+county)).status,410);
 });
 test('publisher benchmarks are independently deduplicated, immutable and never counted as individual listings',async()=>{
  const s=await makeSource('kpc_market'),job=await transaction(api,db=>enqueue(db,s,randomUUID(),null,'test-owner'));
@@ -25,7 +24,7 @@ test('publisher benchmarks are independently deduplicated, immutable and never c
  const sql=`INSERT INTO atlas_core.market_benchmarks(source_id,job_id,artifact_id,series_key,geography,market_type,period_start,period_end,median_price,sample_count,currency,methodology,source_url,content_hash) VALUES($1,$2,$3,'rent:Kenya','Kenya','rent','2026-10-01','2026-10-31',10000,30,'KES','Synthetic methodology','https://kenyapropertycentre.com/market-trends/average-prices/for-rent',$4) ON CONFLICT DO NOTHING`;
  assert.equal((await worker.query(sql,[s.id,job.id,artifact,'b'.repeat(64)])).rowCount,1);assert.equal((await worker.query(sql,[s.id,job.id,artifact,'b'.repeat(64)])).rowCount,0);
  await assert.rejects(owner.query('UPDATE atlas_core.market_benchmarks SET median_price=1 WHERE source_id=$1',[s.id]),/append-only/);
- const response=await(await req('/research/benchmarks?market_type=rent')).json();assert.ok(response.results.some((r:any)=>r.methodology==='Synthetic methodology'));assert.equal((await(await req('/listings?county_id='+county)).json()).results.length,0);
+ const response=await(await req('/research/benchmarks?market_type=rent')).json();assert.ok(response.results.some((r:any)=>r.methodology==='Synthetic methodology'));assert.equal((await req('/listings?county_id='+county)).status,410);
  await owner.query('UPDATE atlas_control.sources SET publication_allowed=false WHERE id=$1',[s.id]);assert.ok(!(await(await req('/research/benchmarks?market_type=rent')).json()).results.some((r:any)=>r.methodology==='Synthetic methodology'));
  const review=await(await req('/collection/sources')).json();assert.equal(review.reviews.find((r:any)=>r.slug==='jiji').decision,'requires_permission');
  await assert.rejects(api.query('SELECT * FROM atlas_control.crawl_configs'),{code:'42501'});await assert.rejects(api.query('SELECT * FROM atlas_core.canonical_listing_urls'),{code:'42501'});

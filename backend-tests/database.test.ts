@@ -53,7 +53,7 @@ test('Homara connector writes source-scoped observations and bathrooms; an empty
   await assert.rejects(owner.query('UPDATE atlas_control.sources SET publication_allowed=true WHERE id=$1',[s.id]),{code:'23514'});
   const publicHealth=JSON.stringify(await (await req('/api/v1/system/data-health')).json());assert.ok(!publicHealth.includes(s.slug));
   assert.equal((await api.query('SELECT id FROM atlas_control.artifacts WHERE source_id=$1',[s.id])).rowCount,0);
-  assert.equal((await(await req('/api/v1/listings?county_id='+county)).json()).results.length,0);
+  assert.equal((await req('/api/v1/listings?county_id='+county)).status,410);
   assert.ok(!JSON.stringify(await(await req('/api/v1/collection/sources')).json()).includes(s.slug));
   await transaction(api,db=>enqueue(db,s,randomUUID(),null,actor));const empty=await claim(worker);assert.ok(empty);
   const emptyResult=await processJob(worker,storage,empty,async()=>new Response(JSON.stringify({...payload,records:[]})));assert.equal(emptyResult.status,'succeeded');assert.equal(emptyResult.received,0);
