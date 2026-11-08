@@ -22,7 +22,7 @@ export function crawlUrl(raw:string,origin:string,prefixes:string[],hosts:string
  if(u.protocol!=='https:'||u.origin!==base.origin||u.username||u.password||u.port||isIP(u.hostname.replace(/[\[\]]/g,''))||!hosts.includes(u.hostname)||u.hostname.endsWith('.')||/%(?:2f|5c)/i.test(u.pathname)||u.href.length>2000||[...u.searchParams.keys()].some(k=>/token|auth|session|email|password|api.?key/i.test(k))||!prefixes.some(p=>u.pathname===p||u.pathname.startsWith(p.endsWith('/')?p:p+'/')))throw Error('source_unsafe_url');
  u.hash='';return u;
 }
-export async function crawlText(raw:string,origin:string,prefixes:string[],hosts:string[],signal?:AbortSignal,allowed?:(url:URL)=>boolean):Promise<{text:string;url:string;sha256:string}>{
+export async function crawlBytes(raw:string,origin:string,prefixes:string[],hosts:string[],signal?:AbortSignal,allowed?:(url:URL)=>boolean):Promise<{bytes:Buffer;url:string;sha256:string}>{
  let u=crawlUrl(raw,origin,prefixes,hosts);
  for(let hops=0;hops<3;hops++){
   if(allowed&&!allowed(u))throw Error('source_robots_disallowed');
@@ -35,9 +35,12 @@ export async function crawlText(raw:string,origin:string,prefixes:string[],hosts
   if([301,302,303,307,308].includes(result.status)){u=crawlUrl(new URL(result.location||'',u).href,origin,prefixes,hosts);continue;}
   if(result.status!==200){const raw=result.retryAfter||'',delay=/^\d+$/.test(raw)?Number(raw):Math.ceil((Date.parse(raw)-Date.now())/1000);throw new CrawlHttpError('upstream_http_'+result.status,[429,503].includes(result.status)&&Number.isFinite(delay)?Math.min(604800,Math.max(0,delay)):0);}
   let bytes=result.bytes;if(result.encoding==='gzip')bytes=gunzipSync(bytes,{maxOutputLength:2*1024*1024});else if(result.encoding&&result.encoding!=='identity')throw Error('upstream_unsupported_encoding');
-  return {text:new TextDecoder('utf-8',{fatal:true}).decode(bytes),url:u.href,sha256:createHash('sha256').update(bytes).digest('hex')};
+  return {bytes,url:u.href,sha256:createHash('sha256').update(bytes).digest('hex')};
  }
  throw Error('upstream_redirect_limit');
+}
+export async function crawlText(raw:string,origin:string,prefixes:string[],hosts:string[],signal?:AbortSignal,allowed?:(url:URL)=>boolean){
+ const result=await crawlBytes(raw,origin,prefixes,hosts,signal,allowed);return {text:new TextDecoder('utf-8',{fatal:true}).decode(result.bytes),url:result.url,sha256:result.sha256};
 }
 export function robotsAllowed(text:string,path:string,agent=crawlerAgent){
  if(text.length>256000)throw Error('source_robots_too_large');

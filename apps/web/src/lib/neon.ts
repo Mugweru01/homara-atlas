@@ -31,6 +31,19 @@ export async function workspaceRequest(path: string, init?: RequestInit, expecte
       413: 'This report is too large. Keep it under 10 KB.',
       429: 'You have reached the request limit. Please try again in a minute.',
     };
+    if (path.startsWith('/research'))
+      throw new Error(
+        response.status === 400
+          ? 'Check the research name, locations and numeric assumptions.'
+          : response.status === 409
+            ? 'This collection is full (100 items), or the request conflicts with its current state.'
+            : response.status === 413
+              ? 'This research snapshot is too large. Narrow the locations or reference period.'
+              : response.status === 404
+                ? 'This research item is no longer available.'
+                : messages[response.status] ||
+                  'Research is temporarily unavailable. Please try again.'
+      );
     throw new Error(
       messages[response.status] || 'Your workspace is temporarily unavailable. Please try again.'
     );

@@ -25,6 +25,7 @@ export type Indicator = {
   retrieved_at: string;
 };
 export type Source = {
+  driver?: string;
   slug: string;
   name: string;
   data_kind: string;

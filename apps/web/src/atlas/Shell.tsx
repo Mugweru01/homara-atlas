@@ -23,7 +23,7 @@ const navigation = [
   { path: '/context', label: 'National context', icon: BarChart3 },
   { path: '/counties', label: 'County explorer', icon: Map },
   { path: '/locations', label: 'Locations', icon: Map },
-  { path: '/listings', label: 'Property listings', icon: Database },
+  { path: '/research', label: 'Research studio', icon: BarChart3 },
   { path: '/market', label: 'Property market', icon: BarChart3 },
   { path: '/sources', label: 'Data sources', icon: Database },
 ];
