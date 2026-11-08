@@ -15,6 +15,7 @@ import { registerResearch } from './research.js';
 import { registerGeography } from './geography.js';
 import {registerCatalog} from './catalog.js';
 import {registerSourcePush} from './source-push.js';
+import {registerIntelligence} from './intelligence.js';
 
 export type Dependencies={
  pool:Pool; storage:Storage; verify:(token:string)=>Promise<Principal>; rateSecret:string;
@@ -60,7 +61,7 @@ export function createApp(d:Dependencies) {
   return c.json({status:rows.some(r=>r.stale)?'degraded':'current',sources:rows});
  });
  app.get('/api/v1/sources',async c=>{
-  const {rows}=await d.pool.query(`SELECT s.slug,s.name,s.data_kind,s.license,s.permission_url,s.attribution,s.last_success_at,
+  const {rows}=await d.pool.query(`SELECT s.slug,s.name,s.driver,s.data_kind,s.license,s.permission_url,s.attribution,s.last_success_at,
    g.revision dataset_revision,g.package_version dataset_version
    FROM atlas_control.sources s LEFT JOIN atlas_geo.published_release g ON g.source_id=s.id
    WHERE s.status='active' AND s.publication_allowed AND (s.rights_expire_at IS NULL OR s.rights_expire_at>now()) ORDER BY s.slug`);
@@ -239,5 +240,6 @@ export function createApp(d:Dependencies) {
  });
  registerResearch(app,d);
  registerCatalog(app,d);
+ registerIntelligence(app,d);
  return app;
 }
